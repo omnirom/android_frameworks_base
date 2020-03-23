@@ -70,6 +70,7 @@ public class KeyguardSliceView extends LinearLayout {
     private final LayoutTransition mLayoutTransition;
     @VisibleForTesting
     TextView mTitle;
+    TextView mSubTitle;
     private Row mRow;
     private int mTextColor;
     private float mDarkAmount = 0;
@@ -103,6 +104,7 @@ public class KeyguardSliceView extends LinearLayout {
     protected void onFinishInflate() {
         super.onFinishInflate();
         mTitle = findViewById(R.id.title);
+        mSubTitle = findViewById(R.id.subTitle);
         mRow = findViewById(R.id.row);
         mTextColor = Utils.getColorAttrDefaultColor(mContext, R.attr.wallpaperTextColor);
         mIconSize = (int) mContext.getResources().getDimension(R.dimen.widget_icon_size);
@@ -139,12 +141,21 @@ public class KeyguardSliceView extends LinearLayout {
 
         if (!mHasHeader) {
             mTitle.setVisibility(GONE);
+            mSubTitle.setVisibility(GONE);
         } else {
             mTitle.setVisibility(VISIBLE);
 
             SliceItem mainTitle = header.getTitleItem();
             CharSequence title = mainTitle != null ? mainTitle.getText() : null;
             mTitle.setText(title);
+
+            SliceItem subTitle = header.getSubtitleItem();
+            if (subTitle != null) {
+                mSubTitle.setVisibility(VISIBLE);
+                CharSequence subTitleText = subTitle.getText();
+                mSubTitle.setText(subTitleText);
+            }
+
             if (header.getPrimaryAction() != null
                     && header.getPrimaryAction().getAction() != null) {
                 clickActions.put(mTitle, header.getPrimaryAction().getAction());
