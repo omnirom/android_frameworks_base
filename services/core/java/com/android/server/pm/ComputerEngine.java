@@ -1551,17 +1551,19 @@ public class ComputerEngine implements Computer {
             }
 
             if (isMicroG && mUseMicroGBuildType) {
-                try {
-                    packageInfo.signingInfo = new SigningInfo(
-                            new SigningDetails(
-                                    packageInfo.signatures,
-                                    SigningDetails.SignatureSchemeVersion.SIGNING_BLOCK_V3,
-                                    SigningDetails.toSigningKeys(packageInfo.signatures),
-                                    null
-                            )
-                    );
-                } catch (CertificateException e) {
-                    Slog.e(TAG, "Caught an exception when creating signing keys: ", e);
+                if (grantedPermissions.contains("android.permission.FAKE_PACKAGE_SIGNATURE")) {
+                    try {
+                        packageInfo.signingInfo = new SigningInfo(
+                                new SigningDetails(
+                                        packageInfo.signatures,
+                                        SigningDetails.SignatureSchemeVersion.SIGNING_BLOCK_V3,
+                                        SigningDetails.toSigningKeys(packageInfo.signatures),
+                                        null
+                                )
+                        );
+                    } catch (CertificateException e) {
+                        Slog.e(TAG, "Caught an exception when creating signing keys: ", e);
+                    }
                 }
             }
 
