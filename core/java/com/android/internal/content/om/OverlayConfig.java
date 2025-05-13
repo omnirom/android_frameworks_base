@@ -19,6 +19,7 @@ package com.android.internal.content.om;
 import android.annotation.NonNull;
 import android.annotation.Nullable;
 import android.content.pm.PackagePartitions;
+import android.content.res.AssetManager;
 import android.os.Build;
 import android.os.Trace;
 import android.util.ArrayMap;
@@ -537,7 +538,7 @@ public class OverlayConfig {
         final ArrayList<String> idmapPaths = new ArrayList<>();
 
         for (Map.Entry<String, String> target : new HashMap<String, String>() {{
-                put("/system/framework/framework-res.apk", "android");
+                put(AssetManager.FRAMEWORK_APK_PATH, "android");
                 put("/system/framework/omnirom-res.apk", "omnirom.platform");
         }}.entrySet()) {
             final String targetPath = target.getKey();

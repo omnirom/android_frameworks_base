@@ -17,10 +17,11 @@
 package com.android.systemui.inputdevice.tutorial.data.repository
 
 import android.content.Context
-import androidx.annotation.VisibleForTesting
 import androidx.datastore.core.DataStore
+import androidx.datastore.core.handlers.ReplaceFileCorruptionHandler
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.android.systemui.dagger.SysUISingleton
@@ -37,16 +38,21 @@ import kotlinx.coroutines.flow.map
 class TutorialSchedulerRepository(
     private val applicationContext: Context,
     backgroundScope: CoroutineScope,
-    dataStoreName: String
+    dataStoreName: String,
 ) {
     @Inject
     constructor(
         @Application applicationContext: Context,
-        @Background backgroundScope: CoroutineScope
+        @Background backgroundScope: CoroutineScope,
     ) : this(applicationContext, backgroundScope, dataStoreName = DATASTORE_NAME)
 
     private val Context.dataStore: DataStore<Preferences> by
-        preferencesDataStore(name = dataStoreName, scope = backgroundScope)
+        preferencesDataStore(
+            name = dataStoreName,
+            corruptionHandler =
+                ReplaceFileCorruptionHandler(produceNewData = { emptyPreferences() }),
+            scope = backgroundScope,
+        )
 
     suspend fun isLaunched(deviceType: DeviceType): Boolean = loadData()[deviceType]!!.isLaunched
 
@@ -73,7 +79,7 @@ class TutorialSchedulerRepository(
     private fun getSchedulerInfo(pref: Preferences): Map<DeviceType, DeviceSchedulerInfo> {
         return mapOf(
             DeviceType.KEYBOARD to getDeviceSchedulerInfo(pref, DeviceType.KEYBOARD),
-            DeviceType.TOUCHPAD to getDeviceSchedulerInfo(pref, DeviceType.TOUCHPAD)
+            DeviceType.TOUCHPAD to getDeviceSchedulerInfo(pref, DeviceType.TOUCHPAD),
         )
     }
 
@@ -89,8 +95,7 @@ class TutorialSchedulerRepository(
     private fun getConnectKey(device: DeviceType) =
         longPreferencesKey(device.name + CONNECT_TIME_SUFFIX)
 
-    @VisibleForTesting
-    suspend fun clearDataStore() {
+    suspend fun clear() {
         applicationContext.dataStore.edit { it.clear() }
     }
 
@@ -103,5 +108,5 @@ class TutorialSchedulerRepository(
 
 enum class DeviceType {
     KEYBOARD,
-    TOUCHPAD
+    TOUCHPAD,
 }

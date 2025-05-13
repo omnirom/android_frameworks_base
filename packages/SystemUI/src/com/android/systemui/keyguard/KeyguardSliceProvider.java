@@ -354,6 +354,11 @@ public class KeyguardSliceProvider extends SliceProvider implements
     @Override
     public boolean onCreateSliceProvider() {
         mContextAvailableCallback.onContextAvailable(getContext());
+        if (mMediaManager == null) {
+            Log.e(TAG, "Dagger injection failed, cannot start. See any above warnings with string: "
+                    + "\"No injector for class\"");
+            return false;
+        }
         mMediaWakeLock = new SettableWakeLock(
                 WakeLock.createPartial(getContext(), mWakeLockLogger, "media"), "media");
         synchronized (KeyguardSliceProvider.sInstanceLock) {
@@ -561,7 +566,13 @@ public class KeyguardSliceProvider extends SliceProvider implements
     }
 
     protected void notifyChange() {
-        mBgHandler.post(() -> mContentResolver.notifyChange(mSliceUri, null /* observer */));
+        mBgHandler.post(() -> {
+            try {
+                mContentResolver.notifyChange(mSliceUri, null /* observer */);
+            } catch (Exception e) {
+                Log.e(TAG, "Error on mContentResolver.notifyChange()", e);
+            }
+        });
     }
 
     @Override

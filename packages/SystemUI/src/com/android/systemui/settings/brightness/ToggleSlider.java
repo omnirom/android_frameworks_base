@@ -16,6 +16,7 @@
 
 package com.android.systemui.settings.brightness;
 
+import android.annotation.StringRes;
 import android.view.MotionEvent;
 
 import com.android.settingslib.RestrictedLockUtils;
@@ -37,6 +38,7 @@ public interface ToggleSlider {
 
     void showView();
     void hideView();
+    void showToast(@StringRes int resId);
     boolean isVisible();
 
     void updateThumb(int value);

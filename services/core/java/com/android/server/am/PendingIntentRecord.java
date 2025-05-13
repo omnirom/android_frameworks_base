@@ -24,6 +24,8 @@ import static android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_COMPAT;
 import static android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_DENIED;
 import static android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_SYSTEM_DEFINED;
 import static android.app.ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_IF_VISIBLE;
+import static android.os.PowerWhitelistManager.TEMPORARY_ALLOWLIST_TYPE_FOREGROUND_SERVICE_ALLOWED;
+import static android.os.PowerWhitelistManager.TEMPORARY_ALLOWLIST_TYPE_FOREGROUND_SERVICE_NOT_ALLOWED;
 import static android.os.Process.ROOT_UID;
 import static android.os.Process.SYSTEM_UID;
 
@@ -305,6 +307,10 @@ public final class PendingIntentRecord extends IIntentSender.Stub {
         this.stringName = null;
     }
 
+    @VisibleForTesting TempAllowListDuration getAllowlistDurationLocked(IBinder allowlistToken) {
+        return mAllowlistDuration.get(allowlistToken);
+    }
+
     void setAllowBgActivityStarts(IBinder token, int flags) {
         if (token == null) return;
         if ((flags & FLAG_ACTIVITY_SENDER) != 0) {
@@ -323,6 +329,13 @@ public final class PendingIntentRecord extends IIntentSender.Stub {
         mAllowBgActivityStartsForActivitySender.remove(token);
         mAllowBgActivityStartsForBroadcastSender.remove(token);
         mAllowBgActivityStartsForServiceSender.remove(token);
+        if (mAllowlistDuration != null) {
+            TempAllowListDuration duration = mAllowlistDuration.get(token);
+            if (duration != null
+                    && duration.type == TEMPORARY_ALLOWLIST_TYPE_FOREGROUND_SERVICE_ALLOWED) {
+                duration.type = TEMPORARY_ALLOWLIST_TYPE_FOREGROUND_SERVICE_NOT_ALLOWED;
+            }
+        }
     }
 
     public void registerCancelListenerLocked(IResultReceiver receiver) {
@@ -432,6 +445,14 @@ public final class PendingIntentRecord extends IIntentSender.Stub {
         }
     }
 
+    /**
+     * get package name of the PendingIntent sender.
+     * @return package name of the PendingIntent sender.
+     */
+    public String getPackageName() {
+        return key.packageName;
+    }
+
     @Deprecated
     public int sendInner(int code, Intent intent, String resolvedType, IBinder allowlistToken,
             IIntentReceiver finishedReceiver, String requiredPermission, IBinder resultTo,
@@ -525,9 +546,9 @@ public final class PendingIntentRecord extends IIntentSender.Stub {
             // Extract options before clearing calling identity
             mergedOptions = key.options;
             if (mergedOptions == null) {
-                mergedOptions = new SafeActivityOptions(opts);
+                mergedOptions = new SafeActivityOptions(opts, callingPid, callingUid);
             } else {
-                mergedOptions.setCallerOptions(opts);
+                mergedOptions.setCallerOptions(opts, callingPid, callingUid);
             }
 
             if (mAllowlistDuration != null) {
@@ -621,7 +642,8 @@ public final class PendingIntentRecord extends IIntentSender.Stub {
                                     allIntents, allResolvedTypes, resultTo, mergedOptions, userId,
                                     false /* validateIncomingUser */,
                                     this /* originatingPendingIntent */,
-                                    getBackgroundStartPrivilegesForActivitySender(allowlistToken));
+                                    getBackgroundStartPrivilegesForActivitySender(allowlistToken)
+                                            .allowsBackgroundActivityStarts());
                         } else {
                             res = controller.mAtmInternal.startActivityInPackage(uid, callingPid,
                                     callingUid, key.packageName, key.featureId, finalIntent,
@@ -629,7 +651,8 @@ public final class PendingIntentRecord extends IIntentSender.Stub {
                                     mergedOptions, userId, null, "PendingIntentRecord",
                                     false /* validateIncomingUser */,
                                     this /* originatingPendingIntent */,
-                                    getBackgroundStartPrivilegesForActivitySender(allowlistToken));
+                                    getBackgroundStartPrivilegesForActivitySender(allowlistToken)
+                                            .allowsBackgroundActivityStarts());
                         }
                     } catch (RuntimeException e) {
                         Slog.w(TAG, "Unable to send startActivity intent", e);
@@ -693,7 +716,7 @@ public final class PendingIntentRecord extends IIntentSender.Stub {
         return res;
     }
 
-    private BackgroundStartPrivileges getBackgroundStartPrivilegesForActivitySender(
+    @VisibleForTesting BackgroundStartPrivileges getBackgroundStartPrivilegesForActivitySender(
             IBinder allowlistToken) {
         return mAllowBgActivityStartsForActivitySender.contains(allowlistToken)
                 ? BackgroundStartPrivileges.allowBackgroundActivityStarts(allowlistToken)

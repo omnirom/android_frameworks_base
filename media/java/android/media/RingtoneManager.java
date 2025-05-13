@@ -908,6 +908,7 @@ public class RingtoneManager {
      *
      * @hide
      */
+
     public static Uri getActualDefaultRingtoneUriBySlot(Context context, int type, int slotId) {
         String setting = getSettingForTypeBySlot(type, slotId);
         if (setting == null) return null;
@@ -1104,7 +1105,7 @@ public class RingtoneManager {
     /** {@hide} */
     public static Uri getCacheForTypeBySlot(int type, int userId, int slotId) {
         if ((type & TYPE_RINGTONE) != 0) {
-            Uri ringtoneUri = slotId == 1
+                        Uri ringtoneUri = slotId == 1
                     ? Settings.System.RINGTONE2_CACHE_URI
                     : Settings.System.RINGTONE_CACHE_URI;
             return ContentProvider.maybeAddUserId(ringtoneUri, userId);
@@ -1141,7 +1142,24 @@ public class RingtoneManager {
         defaultRingtoneUri = ContentProvider.getUriWithoutUserId(defaultRingtoneUri);
         if (defaultRingtoneUri == null) {
             return -1;
-        } else if (defaultRingtoneUri.equals(Settings.System.DEFAULT_RINGTONE_URI)
+        }
+
+        if (Flags.enableRingtoneHapticsCustomization()
+                && Utils.hasVibration(defaultRingtoneUri)) {
+            // skip to check TYPE_ALARM because the customized haptic hasn't enabled in alarm
+            if (defaultRingtoneUri.toString()
+                    .contains(Settings.System.DEFAULT_RINGTONE_URI.toString())) {
+                return TYPE_RINGTONE;
+            } else if (defaultRingtoneUri.toString()
+                    .contains(Settings.System.DEFAULT_NOTIFICATION_URI.toString())) {
+                return TYPE_NOTIFICATION;
+            } else if (defaultRingtoneUri.toString()
+                    .contains(Settings.System.DEFAULT_ALARM_ALERT_URI.toString())) {
+                return TYPE_ALARM;
+            }
+        }
+
+        if (defaultRingtoneUri.equals(Settings.System.DEFAULT_RINGTONE_URI)
                     || defaultRingtoneUri.equals(Settings.System.DEFAULT_RINGTONE2_URI)) {
             return TYPE_RINGTONE;
         } else if (defaultRingtoneUri.equals(Settings.System.DEFAULT_NOTIFICATION_URI)) {

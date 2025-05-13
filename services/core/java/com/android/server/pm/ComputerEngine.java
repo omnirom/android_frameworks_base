@@ -71,6 +71,7 @@ import android.app.ActivityManager;
 import android.app.admin.DevicePolicyManagerInternal;
 import android.companion.virtual.VirtualDeviceManager;
 import android.content.ComponentName;
+import android.content.ContentProvider;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
@@ -137,7 +138,8 @@ import com.android.internal.util.CollectionUtils;
 import com.android.internal.util.IndentingPrintWriter;
 import com.android.internal.util.Preconditions;
 import com.android.modules.utils.TypedXmlSerializer;
-import com.android.server.ondeviceintelligence.OnDeviceIntelligenceManagerInternal;
+import com.android.server.LocalManagerRegistry;
+import com.android.server.ondeviceintelligence.OnDeviceIntelligenceManagerLocal;
 import com.android.server.pm.dex.DexManager;
 import com.android.server.pm.dex.PackageDexUsage;
 import com.android.server.pm.parsing.PackageInfoUtils;
@@ -660,11 +662,11 @@ public class ComputerEngine implements Computer {
             int userId, int callingUid, int callingPid,
             boolean includeInstantApps, boolean resolveForStart) {
         if (!mUserManager.exists(userId)) return Collections.emptyList();
-        enforceCrossUserOrProfilePermission(callingUid,
+        enforceCrossUserOrProfilePermission(Binder.getCallingUid(),
                 userId,
                 false /*requireFullPermission*/,
                 false /*checkShell*/,
-                "query intent receivers");
+                "query intent services");
         final String instantAppPkgName = getInstantAppPackageName(callingUid);
         flags = updateFlagsForResolve(flags, userId, callingUid, includeInstantApps,
                 false /* isImplicitImageCaptureIntentAndNotSetByDpc */);
@@ -2264,10 +2266,10 @@ public class ComputerEngine implements Computer {
             return true;
         }
         boolean permissionGranted = requireFullPermission ? hasPermission(
-                Manifest.permission.INTERACT_ACROSS_USERS_FULL)
+                Manifest.permission.INTERACT_ACROSS_USERS_FULL, callingUid)
                 : (hasPermission(
-                        android.Manifest.permission.INTERACT_ACROSS_USERS_FULL)
-                        || hasPermission(Manifest.permission.INTERACT_ACROSS_USERS));
+                        android.Manifest.permission.INTERACT_ACROSS_USERS_FULL, callingUid)
+                        || hasPermission(Manifest.permission.INTERACT_ACROSS_USERS, callingUid));
         if (!permissionGranted) {
             if (Process.isIsolatedUid(callingUid) && isKnownIsolatedComputeApp(callingUid)) {
                 return checkIsolatedOwnerHasPermission(callingUid, requireFullPermission);
@@ -2824,7 +2826,8 @@ public class ComputerEngine implements Computer {
             enforceCrossUserPermission(Binder.getCallingUid(), userId, false, false,
                     !isRecentsAccessingChildProfiles(Binder.getCallingUid(), userId),
                     "MATCH_ANY_USER flag requires INTERACT_ACROSS_USERS permission");
-        } else if ((flags & PackageManager.MATCH_UNINSTALLED_PACKAGES) != 0
+        } else if (!Flags.removeCrossUserPermissionHack()
+                && (flags & PackageManager.MATCH_UNINSTALLED_PACKAGES) != 0
                 && isCallerSystemUser
                 && mUserManager.hasProfile(UserHandle.USER_SYSTEM)) {
             // If the caller wants all packages and has a profile associated with it,
@@ -4724,7 +4727,7 @@ public class ComputerEngine implements Computer {
 
         if (!forceAllowCrossUser) {
             enforceCrossUserPermission(
-                    callingUid,
+                    Binder.getCallingUid(),
                     userId,
                     false /* requireFullPermission */,
                     false /* checkShell */,
@@ -4807,8 +4810,14 @@ public class ComputerEngine implements Computer {
             int callingUid) {
         if (!mUserManager.exists(userId)) return null;
         flags = updateFlagsForComponent(flags, userId);
-        final ProviderInfo providerInfo = mComponentResolver.queryProvider(this, name, flags,
-                userId);
+
+        // Callers of this API may not always separate the userID and authority. Let's parse it
+        // before resolving
+        String authorityWithoutUserId = ContentProvider.getAuthorityWithoutUserId(name);
+        userId = ContentProvider.getUserIdFromAuthority(name, userId);
+
+        final ProviderInfo providerInfo = mComponentResolver.queryProvider(this,
+                authorityWithoutUserId, flags, userId);
         boolean checkedGrants = false;
         if (providerInfo != null) {
             // Looking for cross-user grants before enforcing the typical cross-users permissions
@@ -4822,7 +4831,7 @@ public class ComputerEngine implements Computer {
         if (!checkedGrants) {
             boolean enforceCrossUser = true;
 
-            if (isAuthorityRedirectedForCloneProfile(name)) {
+            if (isAuthorityRedirectedForCloneProfile(authorityWithoutUserId)) {
                 final UserManagerInternal umInternal = mInjector.getUserManagerInternal();
 
                 UserInfo userInfo = umInternal.getUserInfo(UserHandle.getUserId(callingUid));
@@ -5297,7 +5306,7 @@ public class ComputerEngine implements Computer {
     @Override
     public int getComponentEnabledSetting(@NonNull ComponentName component, int callingUid,
             @UserIdInt int userId) {
-        enforceCrossUserPermission(callingUid, userId, false /*requireFullPermission*/,
+        enforceCrossUserPermission(Binder.getCallingUid(), userId, false /*requireFullPermission*/,
                 false /*checkShell*/, "getComponentEnabled");
         return getComponentEnabledSettingInternal(component, callingUid, userId);
     }
@@ -5899,10 +5908,10 @@ public class ComputerEngine implements Computer {
         if (isHotword) {
             return true;
         }
-        OnDeviceIntelligenceManagerInternal onDeviceIntelligenceManagerInternal =
-                mInjector.getLocalService(OnDeviceIntelligenceManagerInternal.class);
-        return onDeviceIntelligenceManagerInternal != null
-                && uid == onDeviceIntelligenceManagerInternal.getInferenceServiceUid();
+        OnDeviceIntelligenceManagerLocal onDeviceIntelligenceManagerLocal =
+                LocalManagerRegistry.getManager(OnDeviceIntelligenceManagerLocal.class);
+        return onDeviceIntelligenceManagerLocal != null
+                && uid == onDeviceIntelligenceManagerLocal.getInferenceServiceUid();
     }
 
     @Nullable

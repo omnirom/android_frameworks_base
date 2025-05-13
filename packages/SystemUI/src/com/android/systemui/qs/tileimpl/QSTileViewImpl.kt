@@ -27,6 +27,7 @@ import android.content.res.Resources.ID_NULL
 import android.graphics.Color
 import android.graphics.PorterDuff
 import android.graphics.Rect
+import android.graphics.Typeface
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.GradientDrawable
 import android.graphics.drawable.LayerDrawable
@@ -130,12 +131,12 @@ constructor(
     private val overlayColorActive =
         Utils.applyAlpha(
             /* alpha= */ 0.11f,
-            Utils.getColorAttrDefaultColor(context, R.attr.onShadeActive)
+            Utils.getColorAttrDefaultColor(context, R.attr.onShadeActive),
         )
     private val overlayColorInactive =
         Utils.applyAlpha(
             /* alpha= */ 0.08f,
-            Utils.getColorAttrDefaultColor(context, R.attr.onShadeInactive)
+            Utils.getColorAttrDefaultColor(context, R.attr.onShadeInactive),
         )
 
     private val colorLabelActive = Utils.getColorAttrDefaultColor(context, R.attr.onShadeActive)
@@ -192,10 +193,7 @@ constructor(
     private var lastState = INVALID
     private var lastIconTint = 0
     private val launchableViewDelegate =
-        LaunchableViewDelegate(
-            this,
-            superSetVisibility = { super.setVisibility(it) },
-        )
+        LaunchableViewDelegate(this, superSetVisibility = { super.setVisibility(it) })
     private var lastDisabledByPolicy = false
 
     private val locInScreen = IntArray(2)
@@ -347,6 +345,13 @@ constructor(
         setLabelColor(getLabelColorForState(QSTile.State.DEFAULT_STATE))
         setSecondaryLabelColor(getSecondaryLabelColorForState(QSTile.State.DEFAULT_STATE))
 
+        if (Flags.gsfQuickSettings()) {
+            label.apply {
+                typeface = Typeface.create("gsf-title-small-emphasized", Typeface.NORMAL)
+            }
+            secondaryLabel.apply { typeface = Typeface.create("gsf-label-medium", Typeface.NORMAL) }
+        }
+
         if (!labelHide)
             addView(labelContainer)
     }
@@ -455,7 +460,10 @@ constructor(
             initLongPressEffectCallback()
             init(
                 { _: View -> longPressEffect.onTileClick() },
-                null, // Haptics and long-clicks will be handled by the [QSLongPressEffect]
+                { _: View ->
+                    longPressEffect.onTileLongClick()
+                    true
+                }, // Haptics and long-clicks are handled by [QSLongPressEffect]
             )
         } else {
             val expandable = Expandable.fromView(this)
@@ -620,7 +628,7 @@ constructor(
                     AccessibilityNodeInfo.AccessibilityAction.ACTION_CLICK.id,
                     resources.getString(
                         R.string.accessibility_tile_disabled_by_policy_action_description
-                    )
+                    ),
                 )
             )
         } else {
@@ -628,7 +636,7 @@ constructor(
                 info.addAction(
                     AccessibilityNodeInfo.AccessibilityAction(
                         AccessibilityNodeInfo.AccessibilityAction.ACTION_LONG_CLICK.id,
-                        resources.getString(R.string.accessibility_long_click_tile)
+                        resources.getString(R.string.accessibility_long_click_tile),
                     )
                 )
             }
@@ -683,7 +691,6 @@ constructor(
     }
 
     // HANDLE STATE CHANGES RELATED METHODS
-
     protected open fun handleStateChanged(state: QSTile.State) {
         val allowAnimations = animationsEnabled()
         isClickable = state.state != Tile.STATE_UNAVAILABLE
@@ -753,35 +760,35 @@ constructor(
                 state.spec,
                 state.state,
                 state.disabledByPolicy,
-                getBackgroundColorForState(state.state, state.disabledByPolicy)
+                getBackgroundColorForState(state.state, state.disabledByPolicy),
             )
             if (allowAnimations) {
                 singleAnimator.setValues(
                     colorValuesHolder(
                         BACKGROUND_NAME,
                         backgroundColor,
-                        getBackgroundColorForState(state.state, state.disabledByPolicy)
+                        getBackgroundColorForState(state.state, state.disabledByPolicy),
                     ),
                     colorValuesHolder(
                         LABEL_NAME,
                         label.currentTextColor,
-                        getLabelColorForState(state.state, state.disabledByPolicy)
+                        getLabelColorForState(state.state, state.disabledByPolicy),
                     ),
                     colorValuesHolder(
                         SECONDARY_LABEL_NAME,
                         secondaryLabel.currentTextColor,
-                        getSecondaryLabelColorForState(state.state, state.disabledByPolicy)
+                        getSecondaryLabelColorForState(state.state, state.disabledByPolicy),
                     ),
                     colorValuesHolder(
                         CHEVRON_NAME,
                         chevronView.imageTintList?.defaultColor ?: 0,
-                        getChevronColorForState(state.state, state.disabledByPolicy)
+                        getChevronColorForState(state.state, state.disabledByPolicy),
                     ),
                     colorValuesHolder(
                         OVERLAY_NAME,
                         backgroundOverlayColor,
-                        getOverlayColorForState(state.state)
-                    )
+                        getOverlayColorForState(state.state),
+                    ),
                 )
                 singleAnimator.start()
             } else {
@@ -790,7 +797,7 @@ constructor(
                     getLabelColorForState(state.state, state.disabledByPolicy),
                     getSecondaryLabelColorForState(state.state, state.disabledByPolicy),
                     getChevronColorForState(state.state, state.disabledByPolicy),
-                    getOverlayColorForState(state.state)
+                    getOverlayColorForState(state.state),
                 )
             }
         }
@@ -1114,7 +1121,7 @@ constructor(
             backgroundColor,
             label.currentTextColor,
             secondaryLabel.currentTextColor,
-            chevronView.imageTintList?.defaultColor ?: 0
+            chevronView.imageTintList?.defaultColor ?: 0,
         )
 
     inner class StateChangeRunnable(private val state: QSTile.State) : Runnable {

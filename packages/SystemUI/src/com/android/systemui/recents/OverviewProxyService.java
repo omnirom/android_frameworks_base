@@ -24,10 +24,8 @@ import static android.view.MotionEvent.ACTION_CANCEL;
 import static android.view.MotionEvent.ACTION_DOWN;
 import static android.view.MotionEvent.ACTION_UP;
 import static android.view.WindowManagerPolicyConstants.NAV_BAR_MODE_3BUTTON;
+import static android.window.BackEvent.EDGE_NONE;
 
-import static com.android.systemui.shared.system.QuickStepContract.KEY_EXTRA_SYSUI_PROXY;
-import static com.android.systemui.shared.system.QuickStepContract.KEY_EXTRA_UNFOLD_ANIMATION_FORWARDER;
-import static com.android.systemui.shared.system.QuickStepContract.KEY_EXTRA_UNLOCK_ANIMATION_CONTROLLER;
 import static com.android.systemui.shared.system.QuickStepContract.SYSUI_STATE_AWAKE;
 import static com.android.systemui.shared.system.QuickStepContract.SYSUI_STATE_BOUNCER_SHOWING;
 import static com.android.systemui.shared.system.QuickStepContract.SYSUI_STATE_COMMUNAL_HUB_SHOWING;
@@ -39,8 +37,12 @@ import static com.android.systemui.shared.system.QuickStepContract.SYSUI_STATE_S
 import static com.android.systemui.shared.system.QuickStepContract.SYSUI_STATE_STATUS_BAR_KEYGUARD_SHOWING_OCCLUDED;
 import static com.android.systemui.shared.system.QuickStepContract.SYSUI_STATE_VOICE_INTERACTION_WINDOW_SHOWING;
 import static com.android.systemui.shared.system.QuickStepContract.SYSUI_STATE_WAKEFULNESS_TRANSITION;
+import static com.android.systemui.shared.system.QuickStepContract.addInterface;
+import static com.android.window.flags.Flags.predictiveBackSwipeEdgeNoneApi;
+import static com.android.window.flags.Flags.predictiveBackThreeButtonNav;
 
 import android.annotation.FloatRange;
+import android.annotation.Nullable;
 import android.app.ActivityTaskManager;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
@@ -56,6 +58,7 @@ import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.IRemoteCallback;
 import android.os.Looper;
 import android.os.PatternMatcher;
 import android.os.Process;
@@ -87,7 +90,6 @@ import com.android.systemui.contextualeducation.GestureType;
 import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.dagger.qualifiers.Main;
 import com.android.systemui.dump.DumpManager;
-import com.android.systemui.education.domain.interactor.KeyboardTouchpadEduStatsInteractor;
 import com.android.systemui.keyguard.KeyguardUnlockAnimationController;
 import com.android.systemui.keyguard.KeyguardWmStateRefactor;
 import com.android.systemui.keyguard.WakefulnessLifecycle;
@@ -115,6 +117,7 @@ import com.android.systemui.statusbar.NotificationShadeWindowController;
 import com.android.systemui.statusbar.phone.StatusBarWindowCallback;
 import com.android.systemui.statusbar.policy.CallbackController;
 import com.android.systemui.unfold.progress.UnfoldTransitionProgressForwarder;
+import com.android.wm.shell.back.BackAnimation;
 import com.android.wm.shell.shared.desktopmode.DesktopModeStatus;
 import com.android.wm.shell.sysui.ShellInterface;
 
@@ -144,7 +147,6 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
     public static final String TAG_OPS = "OverviewProxyService";
     private static final long BACKOFF_MILLIS = 1000;
     private static final long DEFERRED_CALLBACK_MILLIS = 5000;
-
     // Max backoff caps at 5 mins
     private static final long MAX_BACKOFF_MILLIS = 10 * 60 * 1000;
 
@@ -159,8 +161,6 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
     private final NotificationShadeWindowController mStatusBarWinController;
     private final Provider<SceneInteractor> mSceneInteractor;
     private final Provider<ShadeInteractor> mShadeInteractor;
-
-    private final KeyboardTouchpadEduStatsInteractor mKeyboardTouchpadEduStatsInteractor;
 
     private final Runnable mConnectionRunnable = () ->
             internalConnectToCurrentUser("runnable: startConnectionToCurrentUser");
@@ -177,11 +177,16 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
     private Region mActiveNavBarRegion;
 
     private final BroadcastDispatcher mBroadcastDispatcher;
+    private final BackAnimation mBackAnimation;
 
     private IOverviewProxy mOverviewProxy;
     private int mConnectionBackoffAttempts;
     private boolean mBound;
     private boolean mIsEnabled;
+    // This is set to false when the overview service is requested to be bound until it is notified
+    // that the previous service has been cleaned up in IOverviewProxy#onUnbind(). It is also set to
+    // true after a 1000ms timeout by mDeferredBindAfterTimedOutCleanup.
+    private boolean mIsPrevServiceCleanedUp = true;
 
     private boolean mIsSystemOrVisibleBgUser;
     private int mCurrentBoundedUserId = -1;
@@ -248,7 +253,8 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
                         } else if (action == ACTION_UP) {
                             // Gesture was too short to be picked up by scene container touch
                             // handling; programmatically start the transition to the shade.
-                            mShadeInteractor.get().expandNotificationShade("short launcher swipe");
+                            mShadeInteractor.get()
+                                    .expandNotificationsShade("short launcher swipe", null);
                         }
                     }
                     event.recycle();
@@ -265,7 +271,8 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
                         mSceneInteractor.get().onRemoteUserInputStarted(
                                 "trackpad swipe");
                     } else if (action == ACTION_UP) {
-                        mShadeInteractor.get().expandNotificationShade("short trackpad swipe");
+                        mShadeInteractor.get()
+                                .expandNotificationsShade("short trackpad swipe", null);
                     }
                     mStatusBarWinController.getWindowRootView().dispatchTouchEvent(event);
                 } else {
@@ -288,11 +295,18 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
         }
 
         @Override
-        public void onBackPressed() {
-            verifyCallerAndClearCallingIdentityPostMain("onBackPressed", () -> {
-                sendEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK);
-                sendEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK);
-            });
+        public void onBackEvent(@Nullable KeyEvent keyEvent) throws RemoteException {
+            if (predictiveBackThreeButtonNav() && predictiveBackSwipeEdgeNoneApi()
+                    && mBackAnimation != null && keyEvent != null) {
+                mBackAnimation.setTriggerBack(!keyEvent.isCanceled());
+                mBackAnimation.onBackMotion(/* touchX */ 0, /* touchY */ 0, keyEvent.getAction(),
+                        EDGE_NONE);
+            } else {
+                verifyCallerAndClearCallingIdentityPostMain("onBackPressed", () -> {
+                    sendEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_BACK);
+                    sendEvent(KeyEvent.ACTION_UP, KeyEvent.KEYCODE_BACK);
+                });
+            }
         }
 
         @Override
@@ -479,6 +493,12 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
         retryConnectionWithBackoff();
     };
 
+    private final Runnable mDeferredBindAfterTimedOutCleanup = () -> {
+        Log.w(TAG_OPS, "Timed out waiting for previous service to clean up, binding to new one");
+        mIsPrevServiceCleanedUp = true;
+        maybeBindService();
+    };
+
     private final BroadcastReceiver mUserEventReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -547,13 +567,9 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
             mOverviewProxy = IOverviewProxy.Stub.asInterface(service);
 
             Bundle params = new Bundle();
-            params.putBinder(KEY_EXTRA_SYSUI_PROXY, mSysUiProxy.asBinder());
-            params.putBinder(KEY_EXTRA_UNLOCK_ANIMATION_CONTROLLER,
-                    mSysuiUnlockAnimationController.asBinder());
-            mUnfoldTransitionProgressForwarder.ifPresent(
-                    unfoldProgressForwarder -> params.putBinder(
-                            KEY_EXTRA_UNFOLD_ANIMATION_FORWARDER,
-                            unfoldProgressForwarder.asBinder()));
+            addInterface(mSysUiProxy, params);
+            addInterface(mSysuiUnlockAnimationController, params);
+            addInterface(mUnfoldTransitionProgressForwarder.orElse(null), params);
             // Add all the interfaces exposed by the shell
             mShellInterface.createExternalInterfaces(params);
 
@@ -659,7 +675,7 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
             DumpManager dumpManager,
             Optional<UnfoldTransitionProgressForwarder> unfoldTransitionProgressForwarder,
             BroadcastDispatcher broadcastDispatcher,
-            KeyboardTouchpadEduStatsInteractor keyboardTouchpadEduStatsInteractor
+            Optional<BackAnimation> backAnimation
     ) {
         // b/241601880: This component should only be running for primary users or
         // secondaryUsers when visibleBackgroundUsers are supported.
@@ -697,7 +713,7 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
         mDisplayTracker = displayTracker;
         mUnfoldTransitionProgressForwarder = unfoldTransitionProgressForwarder;
         mBroadcastDispatcher = broadcastDispatcher;
-        mKeyboardTouchpadEduStatsInteractor = keyboardTouchpadEduStatsInteractor;
+        mBackAnimation = backAnimation.orElse(null);
 
         if (!KeyguardWmStateRefactor.isEnabled()) {
             mSysuiUnlockAnimationController = sysuiUnlockAnimationController;
@@ -853,6 +869,7 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
                 mShadeViewControllerLazy.get().cancelInputFocusTransfer();
             });
         }
+        mIsPrevServiceCleanedUp = true;
         startConnectionToCurrentUser();
     }
 
@@ -883,6 +900,19 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
         }
         mHandler.removeCallbacks(mConnectionRunnable);
 
+        maybeBindService();
+    }
+
+    private void maybeBindService() {
+        if (!mIsPrevServiceCleanedUp) {
+            Log.w(TAG_OPS, "Skipping connection to TouchInteractionService until previous"
+                    + " instance is cleaned up.");
+            if (!mHandler.hasCallbacks(mDeferredConnectionCallback)) {
+                mHandler.postDelayed(mDeferredBindAfterTimedOutCleanup, BACKOFF_MILLIS);
+            }
+            return;
+        }
+
         // Avoid creating TouchInteractionService because the System user in HSUM mode does not
         // interact with UI elements
         UserHandle currentUser = UserHandle.of(mUserTracker.getUserId());
@@ -901,6 +931,7 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
             Log.e(TAG_OPS, "Unable to bind because of security error", e);
         }
         if (mBound) {
+            mIsPrevServiceCleanedUp = false;
             // Ensure that connection has been established even if it thinks it is bound
             mHandler.postDelayed(mDeferredConnectionCallback, DEFERRED_CALLBACK_MILLIS);
         } else {
@@ -938,19 +969,6 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
         return isEnabled() && !QuickStepContract.isLegacyMode(mNavBarMode);
     }
 
-    /**
-     * Updates contextual education stats when a gesture is triggered
-     * @param isTrackpadGesture indicates if the gesture is triggered by trackpad
-     * @param gestureType type of gesture triggered
-     */
-    public void updateContextualEduStats(boolean isTrackpadGesture, GestureType gestureType) {
-        if (isTrackpadGesture) {
-            mKeyboardTouchpadEduStatsInteractor.updateShortcutTriggerTime(gestureType);
-        } else {
-            mKeyboardTouchpadEduStatsInteractor.incrementSignalCount(gestureType);
-        }
-    }
-
     public boolean isEnabled() {
         return mIsEnabled;
     }
@@ -967,12 +985,41 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
             // Always unbind the service (ie. if called through onNullBinding or onBindingDied)
             mContext.unbindService(mOverviewServiceConnection);
             mBound = false;
+            if (mOverviewProxy != null) {
+                try {
+                    mOverviewProxy.onUnbind(new IRemoteCallback.Stub() {
+                        @Override
+                        public void sendResult(Bundle data) throws RemoteException {
+                            // Received Launcher reply, try to bind anew.
+                            mIsPrevServiceCleanedUp = true;
+                            if (mHandler.hasCallbacks(mDeferredBindAfterTimedOutCleanup)) {
+                                mHandler.removeCallbacks(mDeferredBindAfterTimedOutCleanup);
+                                maybeBindService();
+                            }
+                        }
+                    });
+                } catch (RemoteException e) {
+                    Log.w(TAG_OPS, "disconnectFromLauncherService failed to notify Launcher");
+                    mIsPrevServiceCleanedUp = true;
+                }
+            }
         }
 
         if (mOverviewProxy != null) {
             mOverviewProxy.asBinder().unlinkToDeath(mOverviewServiceDeathRcpt, 0);
             mOverviewProxy = null;
             notifyConnectionChanged();
+        }
+    }
+
+    /**
+     * Updates contextual education stats when a gesture is triggered
+     * @param isTrackpadGesture indicates if the gesture is triggered by trackpad
+     * @param gestureType type of gesture triggered
+     */
+    public void updateContextualEduStats(boolean isTrackpadGesture, GestureType gestureType) {
+        for (int i = mConnectionCallbacks.size() - 1; i >= 0; --i) {
+            mConnectionCallbacks.get(i).updateContextualEduStats(isTrackpadGesture, gestureType);
         }
     }
 
@@ -1185,6 +1232,7 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
         pw.print("  mInputFocusTransferStartMillis="); pw.println(mInputFocusTransferStartMillis);
         pw.print("  mActiveNavBarRegion="); pw.println(mActiveNavBarRegion);
         pw.print("  mNavBarMode="); pw.println(mNavBarMode);
+        pw.print("  mIsPrevServiceCleanedUp="); pw.println(mIsPrevServiceCleanedUp);
         mSysUiState.dump(pw, args);
     }
 
@@ -1205,6 +1253,9 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
         /** Set override of home button long press duration, touch slop multiplier, and haptic. */
         default void setOverrideHomeButtonLongPress(
                 long override, float slopMultiplier, boolean haptic) {}
+        /** Updates contextual education stats when target gesture type is triggered. */
+        default void updateContextualEduStats(
+                boolean isTrackpadGesture, GestureType gestureType) {}
     }
 
     /**

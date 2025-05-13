@@ -892,6 +892,12 @@ public final class Parcel {
 
     /**
      * Report whether the parcel contains any marshalled file descriptors.
+     *
+     * WARNING: Parcelable definitions change over time. Unless you define
+     * a Parcelable yourself OR the Parcelable explicitly guarantees that
+     * it would never include such objects, you should not expect the return
+     * value to stay the same, and your code should continue to work even
+     * if the return value changes.
      */
     public boolean hasFileDescriptors() {
         return nativeHasFileDescriptors(mNativePtr);
@@ -900,6 +906,12 @@ public final class Parcel {
     /**
      * Report whether the parcel contains any marshalled file descriptors in the range defined by
      * {@code offset} and {@code length}.
+     *
+     * WARNING: Parcelable definitions change over time. Unless you define
+     * a Parcelable yourself OR the Parcelable explicitly guarantees that
+     * it would never include such objects, you should not expect the return
+     * value to stay the same, and your code should continue to work even
+     * if the return value changes.
      *
      * @param offset The offset from which the range starts. Should be between 0 and
      *     {@link #dataSize()}.
@@ -920,6 +932,12 @@ public final class Parcel {
      *
      * <p>For most cases, it will use the self-reported {@link Parcelable#describeContents()} method
      * for that.
+     *
+     * WARNING: Parcelable definitions change over time. Unless you define
+     * a Parcelable yourself OR the Parcelable explicitly guarantees that
+     * it would never include such objects, you should not expect the return
+     * value to stay the same, and your code should continue to work even
+     * if the return value changes.
      *
      * @throws IllegalArgumentException if you provide any object not supported by above methods
      *     (including if the unsupported object is inside a nested container).
@@ -990,6 +1008,13 @@ public final class Parcel {
      *
      * @throws UnsupportedOperationException if binder kernel driver was disabled or if method was
      *                                       invoked in case of Binder RPC protocol.
+     *
+     * WARNING: Parcelable definitions change over time. Unless you define
+     * a Parcelable yourself OR the Parcelable explicitly guarantees that
+     * it would never include such objects, you should not expect the return
+     * value to stay the same, and your code should continue to work even
+     * if the return value changes.
+     *
      * @hide
      */
     public boolean hasBinders() {
@@ -999,6 +1024,12 @@ public final class Parcel {
     /**
      * Report whether the parcel contains any marshalled {@link IBinder} objects in the range
      * defined by {@code offset} and {@code length}.
+     *
+     * WARNING: Parcelable definitions change over time. Unless you define
+     * a Parcelable yourself OR the Parcelable explicitly guarantees that
+     * it would never include such objects, you should not expect the return
+     * value to stay the same, and your code should continue to work even
+     * if the return value changes.
      *
      * @param offset The offset from which the range starts. Should be between 0 and
      *               {@link #dataSize()}.
@@ -1371,7 +1402,6 @@ public final class Parcel {
         writeInt(N);
         if (DEBUG_ARRAY_MAP) {
             RuntimeException here =  new RuntimeException("here");
-            here.fillInStackTrace();
             Log.d(TAG, "Writing " + N + " ArrayMap entries", here);
         }
         int startPos;
@@ -5508,7 +5538,7 @@ public final class Parcel {
 
     private void readArrayMapInternal(@NonNull ArrayMap<? super String, Object> outVal,
             int size, @Nullable ClassLoader loader) {
-        readArrayMap(outVal, size, /* sorted */ true, /* lazy */ false, loader);
+        readArrayMap(outVal, size, /* sorted */ true, /* lazy */ false, loader, null);
     }
 
     /**
@@ -5518,17 +5548,16 @@ public final class Parcel {
      * @param lazy   Whether to populate the map with lazy {@link Function} objects for
      *               length-prefixed values. See {@link Parcel#readLazyValue(ClassLoader)} for more
      *               details.
-     * @return a count of the lazy values in the map
+     * @param lazyValueCount number of lazy values added here
      * @hide
      */
-    int readArrayMap(ArrayMap<? super String, Object> map, int size, boolean sorted,
-            boolean lazy, @Nullable ClassLoader loader) {
-        int lazyValues = 0;
+    void readArrayMap(ArrayMap<? super String, Object> map, int size, boolean sorted,
+            boolean lazy, @Nullable ClassLoader loader, int[] lazyValueCount) {
         while (size > 0) {
             String key = readString();
             Object value = (lazy) ? readLazyValue(loader) : readValue(loader);
             if (value instanceof LazyValue) {
-                lazyValues++;
+                lazyValueCount[0]++;
             }
             if (sorted) {
                 map.append(key, value);
@@ -5540,7 +5569,6 @@ public final class Parcel {
         if (sorted) {
             map.validate();
         }
-        return lazyValues;
     }
 
     /**

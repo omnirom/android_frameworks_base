@@ -11,6 +11,7 @@ import android.provider.Settings
 import android.service.quicksettings.Tile
 import android.text.TextUtils
 import android.text.format.DateFormat
+import android.widget.Button
 import androidx.annotation.VisibleForTesting
 import com.android.internal.jank.InteractionJankMonitor
 import com.android.internal.logging.MetricsLogger
@@ -46,27 +47,30 @@ constructor(
     qsLogger: QSLogger,
     private val userTracker: UserTracker,
     nextAlarmController: NextAlarmController,
-    private val zenModeController: ZenModeController
-) : QSTileImpl<QSTile.State>(
-    host,
-    uiEventLogger,
-    backgroundLooper,
-    mainHandler,
-    falsingManager,
-    metricsLogger,
-    statusBarStateController,
-    activityStarter,
-    qsLogger
-) {
+    private val zenModeController: ZenModeController,
+) :
+    QSTileImpl<QSTile.State>(
+        host,
+        uiEventLogger,
+        backgroundLooper,
+        mainHandler,
+        falsingManager,
+        metricsLogger,
+        statusBarStateController,
+        activityStarter,
+        qsLogger,
+    ) {
 
     private var lastAlarmInfo: AlarmManager.AlarmClockInfo? = null
-    private val icon = ResourceIcon.get(R.drawable.ic_alarm)
+    private var icon: QSTile.Icon? = null
     private val iconDim = ResourceIcon.get(R.drawable.ic_alarm_dim)
     @VisibleForTesting internal val defaultIntent = Intent(AlarmClock.ACTION_SHOW_ALARMS)
-    private val callback = NextAlarmController.NextAlarmChangeCallback { nextAlarm ->
-        lastAlarmInfo = nextAlarm
-        refreshState()
-    }
+    private val callback =
+        NextAlarmController.NextAlarmChangeCallback { nextAlarm ->
+            lastAlarmInfo = nextAlarm
+            refreshState()
+        }
+
     private val zenCallback = object : ZenModeController.Callback {
         override fun onZenChanged(zen: Int) { refreshState() }
         override fun onConsolidatedPolicyChanged(policy: NotificationManager.Policy) { refreshState() }
@@ -80,6 +84,7 @@ constructor(
     override fun newTileState(): QSTile.State {
         return QSTile.State().apply {
             handlesLongClick = false
+            expandedAccessibilityClassName = Button::class.java.name
         }
     }
 
@@ -92,21 +97,28 @@ constructor(
         if (pendingIntent != null) {
             mActivityStarter.postStartActivityDismissingKeyguard(pendingIntent, animationController)
         } else {
-            mActivityStarter.postStartActivityDismissingKeyguard(defaultIntent, 0,
-                    animationController)
+            mActivityStarter.postStartActivityDismissingKeyguard(
+                defaultIntent,
+                0,
+                animationController,
+            )
         }
     }
 
     override fun handleUpdateState(state: QSTile.State, arg: Any?) {
+        if (icon == null) {
+            icon = maybeLoadResourceIcon(R.drawable.ic_alarm)
+        }
         state.icon = if (zenAllowsAlarm()) icon else iconDim
         state.label = if (zenAllowsAlarm()) tileLabel else tileLabel.toString() + mContext.getString(R.string.alarm_title_dnd_indicator)
         lastAlarmInfo?.let {
             state.secondaryLabel = formatNextAlarm(it)
             state.state = Tile.STATE_ACTIVE
-        } ?: run {
-            state.secondaryLabel = mContext.getString(R.string.qs_alarm_tile_no_alarm)
-            state.state = Tile.STATE_INACTIVE
         }
+            ?: run {
+                state.secondaryLabel = mContext.getString(R.string.qs_alarm_tile_no_alarm)
+                state.state = Tile.STATE_INACTIVE
+            }
         state.contentDescription = TextUtils.concat(state.label, ", ", state.secondaryLabel)
     }
 
@@ -132,9 +144,6 @@ constructor(
         return null
     }
 
-    companion object {
-        const val TILE_SPEC = "alarm"
-    }
 
     private fun zenAllowsAlarm() : Boolean {
         val zen = zenModeController.getZen()
@@ -148,5 +157,9 @@ constructor(
             return true
         }
         return (zenModeController.getConsolidatedPolicy().priorityCategories and NotificationManager.Policy.PRIORITY_CATEGORY_ALARMS) != 0
+    }
+
+    companion object {
+        const val TILE_SPEC = "alarm"
     }
 }

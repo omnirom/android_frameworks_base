@@ -32,7 +32,7 @@ import static android.os.UserHandle.USER_ALL;
 import static android.os.UserHandle.USER_CURRENT;
 import static android.telecom.TelecomManager.EMERGENCY_DIALER_COMPONENT;
 
-import static com.android.internal.protolog.ProtoLogGroup.WM_DEBUG_LOCKTASK;
+import static com.android.internal.protolog.WmProtoLogGroups.WM_DEBUG_LOCKTASK;
 import static com.android.server.wm.ActivityTaskManagerDebugConfig.POSTFIX_LOCKTASK;
 import static com.android.server.wm.ActivityTaskManagerDebugConfig.TAG_ATM;
 import static com.android.server.wm.ActivityTaskManagerDebugConfig.TAG_WITH_CLASS_NAME;
@@ -653,6 +653,10 @@ public class LockTaskController {
         if (!isSystemCaller) {
             task.mLockTaskUid = callingUid;
             if (task.mLockTaskAuth == LOCK_TASK_AUTH_PINNABLE) {
+                if (mLockTaskModeTasks.contains(task)) {
+                    ProtoLog.w(WM_DEBUG_LOCKTASK, "Already locked.");
+                    return;
+                }
                 // startLockTask() called by app, but app is not part of lock task allowlist. Show
                 // app pinning request. We will come back here with isSystemCaller true.
                 ProtoLog.w(WM_DEBUG_LOCKTASK, "Mode default, asking user");
