@@ -1133,21 +1133,21 @@ public final class BatteryService extends SystemService {
                 mLastBroadcastBatteryCapacityLevel = mHealthInfo.batteryCapacityLevel;
 
                 final int maxChargingMicroWatt;
-                if (mLastMaxChargingVoltage <= 0) {
-                    mLastMaxChargingVoltage = DEFAULT_CHARGING_VOLTAGE_MICRO_VOLT;
+                if (mLastBroadcastMaxChargingVoltage <= 0) {
+                    mLastBroadcastMaxChargingVoltage = DEFAULT_CHARGING_VOLTAGE_MICRO_VOLT;
                 }
-                if (mLastMaxChargingCurrent > 0) {
+                if (mLastBroadcastMaxChargingCurrent > 0) {
                     // Calculating muW = muA * muV / (10^6 mu^2 / mu); splitting up the divisor
                     // to maintain precision equally on both factors.
-                    maxChargingMicroWatt = (mLastMaxChargingCurrent / 1000)
-                            * (mLastMaxChargingVoltage / 1000);
+                    maxChargingMicroWatt = (mLastBroadcastMaxChargingCurrent / 1000)
+                            * (mLastBroadcastMaxChargingVoltage / 1000);
                 } else {
                     maxChargingMicroWatt = -1;
                 }
 
                 if (DEBUG) {
-                    Slog.d(TAG, "mLastMaxChargingCurrent = " + mLastMaxChargingCurrent +
-                            " mLastMaxChargingVoltage = " + mLastMaxChargingVoltage +
+                    Slog.d(TAG, "mLastBroadcastMaxChargingCurrent = " + mLastBroadcastMaxChargingCurrent +
+                            " mLastBroadcastMaxChargingVoltage = " + mLastBroadcastMaxChargingVoltage +
                             " maxChargingMicroWatt = " + maxChargingMicroWatt);
                 }
                 if (mFastChargingLedSupported) {

@@ -441,7 +441,6 @@ constructor(
 
     private val settingsListener = object : OmniSettingsService.OmniSettingsObserver {
         override fun onIntSettingChanged(key: String, newValue: Int) {
-            clock?.events?.onColorPaletteChanged(resources)
             updateColors()
         }
     }

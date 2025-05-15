@@ -719,8 +719,8 @@ public class SettingsBackupAgent extends BackupAgentHelper {
                 null, null);
         try {
             String[] settings = ArrayUtils.concat(String.class, SystemSettings.SETTINGS_TO_BACKUP,
-                    OmniSettings.OMNI_SETTINGS_TO_BACKUP, KEY_SYSTEM);
-            return extractRelevantValues(cursor, settings);
+                    OmniSettings.OMNI_SETTINGS_TO_BACKUP);
+            return extractRelevantValues(cursor, settings, KEY_SYSTEM);
         } finally {
             cursor.close();
         }
