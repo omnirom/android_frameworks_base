@@ -21,10 +21,10 @@
     xmlns:androidprv="http://schemas.android.com/apk/prv/res/android"
     android:autoMirrored="true">
     <item
-        android:width="@dimen/volume_dialog_slider_width"
-        android:height="@dimen/volume_dialog_slider_width">
+        android:width="@dimen/volume_dialog_slider_width_legacy"
+        android:height="@dimen/volume_dialog_slider_width_legacy">
         <shape>
-            <size android:height="@dimen/volume_dialog_slider_width" />
+            <size android:height="@dimen/volume_dialog_slider_width_legacy" />
             <solid android:color="?android:attr/colorAccent" />
             <corners android:radius="@dimen/volume_dialog_slider_corner_radius"/>
         </shape>
