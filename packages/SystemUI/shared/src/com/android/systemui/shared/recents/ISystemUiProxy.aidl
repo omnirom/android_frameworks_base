@@ -102,6 +102,9 @@ interface ISystemUiProxy {
      */
     oneway void expandNotificationPanel() = 29;
 
+    /** Injects chevron left or right press. */
+    oneway void injectChevronPress(int keyCode) = 43;
+
     /**
      * Notifies SystemUI of a back KeyEvent.
      */
