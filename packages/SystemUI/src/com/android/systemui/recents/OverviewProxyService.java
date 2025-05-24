@@ -195,6 +195,10 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
     private long mInputFocusTransferStartMillis;
     private int mNavBarMode = NAV_BAR_MODE_3BUTTON;
 
+    //omni add-on
+    public static final int CURSOR_REPEAT_FLAGS = KeyEvent.FLAG_SOFT_KEYBOARD
+            | KeyEvent.FLAG_KEEP_TOUCH_MODE;
+
     @VisibleForTesting
     public ISystemUiProxy mSysUiProxy = new ISystemUiProxy.Stub() {
         @Override
@@ -310,6 +314,14 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
         }
 
         @Override
+        public void injectChevronPress(int keyCode) throws RemoteException {
+            verifyCallerAndClearCallingIdentityPostMain("longPressInjected", () -> {
+                sendEvent(KeyEvent.ACTION_DOWN, keyCode, CURSOR_REPEAT_FLAGS, false);
+                sendEvent(KeyEvent.ACTION_UP, keyCode, CURSOR_REPEAT_FLAGS, false);
+            });
+        }
+
+        @Override
         public void onImeSwitcherPressed() {
             // TODO(b/204901476) We're intentionally using the default display for now since
             // Launcher/Taskbar isn't display aware.
@@ -364,10 +376,17 @@ public class OverviewProxyService implements CallbackController<OverviewProxyLis
         }
 
         private boolean sendEvent(int action, int code) {
+            return sendEvent(action, code, 0, true);
+        }
+
+        private boolean sendEvent(int action, int code, int flags, boolean applyDefaultFlags) {
             long when = SystemClock.uptimeMillis();
+            if (applyDefaultFlags) {
+                flags |= KeyEvent.FLAG_FROM_SYSTEM | KeyEvent.FLAG_VIRTUAL_HARD_KEY;
+            }
             final KeyEvent ev = new KeyEvent(when, when, action, code, 0 /* repeat */,
                     0 /* metaState */, KeyCharacterMap.VIRTUAL_KEYBOARD, 0 /* scancode */,
-                    KeyEvent.FLAG_FROM_SYSTEM | KeyEvent.FLAG_VIRTUAL_HARD_KEY,
+                    flags,
                     InputDevice.SOURCE_KEYBOARD);
 
             ev.setDisplayId(mContext.getDisplay().getDisplayId());
