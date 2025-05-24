@@ -23,7 +23,6 @@ import android.annotation.Nullable;
 import android.content.Context;
 import android.content.res.Configuration;
 import android.graphics.drawable.Icon;
-import android.os.UserHandle;
 import android.provider.Settings;
 import android.util.AttributeSet;
 import android.util.Log;
@@ -43,19 +42,15 @@ import com.android.systemui.navigationbar.views.buttons.ButtonDispatcher;
 import com.android.systemui.navigationbar.views.buttons.KeyButtonView;
 import com.android.systemui.navigationbar.views.buttons.ReverseLinearLayout;
 import com.android.systemui.navigationbar.views.buttons.ReverseLinearLayout.ReverseRelativeLayout;
-import com.android.systemui.omni.OmniSettingsService;
 import com.android.systemui.recents.OverviewProxyService;
 import com.android.systemui.res.R;
 import com.android.systemui.shared.system.QuickStepContract;
-
-import org.omnirom.omnilib.utils.OmniSettings;
 
 import java.io.PrintWriter;
 import java.lang.ref.WeakReference;
 import java.util.Objects;
 
-public class NavigationBarInflaterView extends FrameLayout
-        implements OmniSettingsService.OmniSettingsObserver {
+public class NavigationBarInflaterView extends FrameLayout {
 
     private static final String TAG = "NavBarInflater";
 
@@ -165,8 +160,7 @@ public class NavigationBarInflaterView extends FrameLayout
 
     protected String getDefaultLayout() {
         final int defaultResource = QuickStepContract.isGesturalMode(mNavBarMode)
-                        ? (showDpadArrowKeys() ? R.string.config_navBarLayoutHandleArrows
-                        : R.string.config_navBarLayoutHandle)
+                ? R.string.config_navBarLayoutHandle
                 : mOverviewProxyService.shouldShowSwipeUpUI()
                         ? R.string.config_navBarLayoutQuickstep
                         : R.string.config_navBarLayout;
@@ -180,15 +174,7 @@ public class NavigationBarInflaterView extends FrameLayout
     @Override
     protected void onDetachedFromWindow() {
         Dependency.get(NavigationModeController.class).removeListener(mListener);
-        Dependency.get(OmniSettingsService.class).removeObserver(this);
         super.onDetachedFromWindow();
-    }
-
-    @Override
-    protected void onAttachedToWindow() {
-        super.onAttachedToWindow();
-        Dependency.get(OmniSettingsService.class).addIntObserver(this,
-            OmniSettings.OMNI_NAVIGATION_BAR_ARROW_KEYS);
     }
 
     public void onLikelyDefaultLayoutChange() {
@@ -505,24 +491,12 @@ public class NavigationBarInflaterView extends FrameLayout
 
     private void clearAllChildren(ViewGroup group) {
         for (int i = 0; i < group.getChildCount(); i++) {
-            if (group.getChildAt(i).getId() != R.id.dpad_group) {
-                ((ViewGroup) group.getChildAt(i)).removeAllViews();
-            }
+            ((ViewGroup) group.getChildAt(i)).removeAllViews();
         }
     }
 
     private static float convertDpToPx(Context context, float dp) {
         return dp * context.getResources().getDisplayMetrics().density;
-    }
-
-    private boolean showDpadArrowKeys() {
-        return Settings.System.getIntForUser(getContext().getContentResolver(),
-                OmniSettings.OMNI_NAVIGATION_BAR_ARROW_KEYS, 0, UserHandle.USER_CURRENT) != 0;
-    }
-
-    @Override
-    public void onIntSettingChanged(String key, Integer newValue) {
-        onLikelyDefaultLayoutChange();
     }
 
     public void dump(PrintWriter pw) {

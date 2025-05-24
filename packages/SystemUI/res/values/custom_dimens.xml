@@ -21,9 +21,6 @@
 <resources>
     <dimen name="cpu_info_text_height">12dp</dimen>
 
-    <!-- Navigation bar dpad -->
-    <dimen name="navigation_extra_key_width">36dp</dimen>
-
     <!-- Brightness and volume slider-->
     <dimen name="rounded_slider_progress_width">8dp</dimen>
     <dimen name="rounded_slider_progress_corner_radius">4dp</dimen>
