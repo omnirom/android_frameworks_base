@@ -43,10 +43,6 @@
     <!-- Keyguard -->
     <string name="keyguard_slice_dnd">Do Not Disturb</string>
 
-    <!-- Navigation bar dpad -->
-    <string name="accessibility_dpad_left">Cursor left</string>
-    <string name="accessibility_dpad_right">Cursor right</string>
-
     <!-- Power menu reboot -->
     <string name="global_action_reboot">Restart</string>
     <string name="global_action_reboot_more">Restart\u2026</string>
