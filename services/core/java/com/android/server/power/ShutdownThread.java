@@ -59,7 +59,7 @@ import android.view.SurfaceControl;
 import android.view.WindowManager;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.server.crashrecovery.CrashRecoveryHelper;
+import com.android.server.PackageWatchdog;
 import com.android.server.LocalServices;
 import com.android.server.statusbar.StatusBarManagerInternal;
 
@@ -359,7 +359,7 @@ public final class ShutdownThread extends Thread {
             }
         } else if (mReason != null && mReason.equals(PowerManager.REBOOT_RECOVERY)) {
             if (!mRebootCustom) {
-                if (CrashRecoveryHelper.isRecoveryTriggeredReboot()) {
+                if (PackageWatchdog.isRecoveryTriggeredReboot()) {
                     // We're not actually doing a factory reset yet; we're rebooting
                     // to ask the user if they'd like to reset, so give them a less
                     // scary dialog message.

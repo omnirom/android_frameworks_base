@@ -17,7 +17,6 @@
 package com.android.systemui.qs;
 
 import static com.android.internal.logging.nano.MetricsProto.MetricsEvent;
-import static com.android.systemui.Flags.quickSettingsVisualHapticsLongpress;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
@@ -44,6 +43,10 @@ import com.android.systemui.qs.external.CustomTile;
 import com.android.systemui.qs.logging.QSLogger;
 import com.android.systemui.qs.tileimpl.QSTileViewImpl;
 import com.android.systemui.scene.shared.flag.SceneContainerFlag;
+import com.android.systemui.shade.ShadeDisplayAware;
+import com.android.systemui.shade.shared.flag.ShadeWindowGoesAround;
+import com.android.systemui.statusbar.policy.ConfigurationController;
+import com.android.systemui.statusbar.policy.ConfigurationController.ConfigurationListener;
 import com.android.systemui.statusbar.policy.SplitShadeStateController;
 import com.android.systemui.util.ViewController;
 import com.android.systemui.util.animation.DisappearParameters;
@@ -101,6 +104,7 @@ public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewContr
     private final QSHost.Callback mQSHostCallback = this::setTiles;
 
     private SplitShadeStateController mSplitShadeStateController;
+    private final ConfigurationController mConfigurationController;
 
     private final Provider<QSLongPressEffect> mLongPressEffectProvider;
 
@@ -117,39 +121,42 @@ public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewContr
 
     private boolean mLastListening;
 
+    private final ConfigurationListener mConfigurationListener = new ConfigurationListener() {
+        @Override
+        public void onConfigChanged(Configuration newConfig) {
+            final boolean previousSplitShadeState = mShouldUseSplitNotificationShade;
+            final int previousOrientation = mLastOrientation;
+            final int previousScreenLayout = mLastScreenLayout;
+            mShouldUseSplitNotificationShade = mSplitShadeStateController
+                    .shouldUseSplitNotificationShade(getResources());
+            mLastOrientation = newConfig.orientation;
+            mLastScreenLayout = newConfig.screenLayout;
+
+            mQSLogger.logOnConfigurationChanged(
+                    /* oldOrientation= */ previousOrientation,
+                    /* newOrientation= */ mLastOrientation,
+                    /* oldShouldUseSplitShade= */ previousSplitShadeState,
+                    /* newShouldUseSplitShade= */ mShouldUseSplitNotificationShade,
+                    /* oldScreenLayout= */ previousScreenLayout,
+                    /* newScreenLayout= */ mLastScreenLayout,
+                    /* containerName= */ mView.getDumpableTag());
+
+            if (SceneContainerFlag.isEnabled()) {
+                setLayoutForMediaInScene();
+            } else {
+                switchTileLayoutIfNeeded();
+            }
+            onConfigurationChanged();
+            if (previousSplitShadeState != mShouldUseSplitNotificationShade) {
+                onSplitShadeChanged(mShouldUseSplitNotificationShade);
+            }
+        }
+    };
+    /** When {@link ShadeWindowGoesAround} is enabled, this listener is not used anymore.*/
     @VisibleForTesting
+    @Deprecated
     protected final QSPanel.OnConfigurationChangedListener mOnConfigurationChangedListener =
-            new QSPanel.OnConfigurationChangedListener() {
-                @Override
-                public void onConfigurationChange(Configuration newConfig) {
-                    final boolean previousSplitShadeState = mShouldUseSplitNotificationShade;
-                    final int previousOrientation = mLastOrientation;
-                    final int previousScreenLayout = mLastScreenLayout;
-                    mShouldUseSplitNotificationShade = mSplitShadeStateController
-                            .shouldUseSplitNotificationShade(getResources());
-                    mLastOrientation = newConfig.orientation;
-                    mLastScreenLayout = newConfig.screenLayout;
-
-                    mQSLogger.logOnConfigurationChanged(
-                        /* oldOrientation= */ previousOrientation,
-                        /* newOrientation= */ mLastOrientation,
-                        /* oldShouldUseSplitShade= */ previousSplitShadeState,
-                        /* newShouldUseSplitShade= */ mShouldUseSplitNotificationShade,
-                        /* oldScreenLayout= */ previousScreenLayout,
-                        /* newScreenLayout= */ mLastScreenLayout,
-                        /* containerName= */ mView.getDumpableTag());
-
-                    if (SceneContainerFlag.isEnabled()) {
-                        setLayoutForMediaInScene();
-                    } else {
-                        switchTileLayoutIfNeeded();
-                    }
-                    onConfigurationChanged();
-                    if (previousSplitShadeState != mShouldUseSplitNotificationShade) {
-                        onSplitShadeChanged(mShouldUseSplitNotificationShade);
-                    }
-                }
-            };
+            newConfig -> mConfigurationListener.onConfigChanged(newConfig);
 
     protected void onConfigurationChanged() { }
 
@@ -179,7 +186,8 @@ public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewContr
             QSLogger qsLogger,
             DumpManager dumpManager,
             SplitShadeStateController splitShadeStateController,
-            Provider<QSLongPressEffect> longPressEffectProvider
+            Provider<QSLongPressEffect> longPressEffectProvider,
+            @ShadeDisplayAware ConfigurationController configurationController
     ) {
         super(view);
         mHost = host;
@@ -191,6 +199,7 @@ public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewContr
         mQSLogger = qsLogger;
         mDumpManager = dumpManager;
         mSplitShadeStateController = splitShadeStateController;
+        mConfigurationController = configurationController;
         mShouldUseSplitNotificationShade =
                 mSplitShadeStateController.shouldUseSplitNotificationShade(getResources());
         mLongPressEffectProvider = longPressEffectProvider;
@@ -244,7 +253,11 @@ public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewContr
         if (!SceneContainerFlag.isEnabled()) {
             mMediaHost.addVisibilityChangeListener(mMediaHostVisibilityListener);
         }
-        mView.addOnConfigurationChangedListener(mOnConfigurationChangedListener);
+        if (ShadeWindowGoesAround.isEnabled()) {
+            mConfigurationController.addCallback(mConfigurationListener);
+        } else {
+            mView.addOnConfigurationChangedListener(mOnConfigurationChangedListener);
+        }
         // We were not attached and the configuration may have changed, trigger the listener.
         if (mView.hadConfigurationChangeWhileDetached()) {
             mOnConfigurationChangedListener.onConfigurationChange(
@@ -286,8 +299,11 @@ public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewContr
     @Override
     protected void onViewDetached() {
         mQSLogger.logOnViewDetached(mLastOrientation, mView.getDumpableTag());
-        mView.removeOnConfigurationChangedListener(mOnConfigurationChangedListener);
-
+        if (ShadeWindowGoesAround.isEnabled()) {
+            mConfigurationController.removeCallback(mConfigurationListener);
+        } else {
+            mView.removeOnConfigurationChangedListener(mOnConfigurationChangedListener);
+        }
         // Call directly so mLastListening is not modified. We want that to have the last actual
         // value.
         mView.getTileLayout().setListening(false, mUiEventLogger);
@@ -379,12 +395,7 @@ public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewContr
     }
 
     private void addTile(final QSTile tile, boolean collapsedView) {
-        QSLongPressEffect longPressEffect;
-        if (quickSettingsVisualHapticsLongpress()) {
-            longPressEffect = mLongPressEffectProvider.get();
-        } else {
-            longPressEffect = null;
-        }
+        QSLongPressEffect longPressEffect = mLongPressEffectProvider.get();
         final QSTileViewImpl tileView = new QSTileViewImpl(
                 getContext(), collapsedView, longPressEffect);
         final TileRecord r = new TileRecord(tile, tileView);
@@ -588,6 +599,7 @@ public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewContr
         }
         if (mMediaHost != null) {
             pw.println("  media bounds: " + mMediaHost.getCurrentBounds());
+            pw.println("  media visibility: " + mMediaHost.getVisible());
             pw.println("  horizontal layout: " + mUsingHorizontalLayout);
             pw.println("  last orientation: " + mLastOrientation);
         }
