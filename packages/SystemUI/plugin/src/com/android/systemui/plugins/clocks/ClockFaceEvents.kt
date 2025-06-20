@@ -73,14 +73,14 @@ data class ThemeConfig(
             seedColor != null -> seedColor!!
             isDarkTheme ->
                 if (coloredClock)
-                                    context.resources.getColor(android.R.color.system_accent1_100)
+                                    context.resources.getColor(android.R.color.system_accent1_100, context.theme)
                 else
-                                    context.resources.getColor(com.android.internal.R.color.primary_text_material_dark)
+                                    context.resources.getColor(com.android.internal.R.color.primary_text_material_dark, context.theme)
                 else ->
                                 if (coloredClock)
-                                    context.resources.getColor(android.R.color.system_accent2_600)
+                                    context.resources.getColor(android.R.color.system_accent2_600, context.theme)
                                 else
-                                    context.resources.getColor(com.android.internal.R.color.primary_text_material_light)
+                                    context.resources.getColor(com.android.internal.R.color.primary_text_material_light, context.theme)
         }
     }
 }
