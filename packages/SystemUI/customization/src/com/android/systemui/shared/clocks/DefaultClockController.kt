@@ -18,7 +18,6 @@ import android.content.res.Resources
 import android.graphics.Color
 import android.graphics.Rect
 import android.icu.text.NumberFormat
-import android.provider.Settings.System
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.widget.FrameLayout
@@ -41,7 +40,6 @@ import com.android.systemui.plugins.clocks.DefaultClockFaceLayout
 import com.android.systemui.plugins.clocks.ThemeConfig
 import com.android.systemui.plugins.clocks.WeatherData
 import com.android.systemui.plugins.clocks.ZenData
-import org.omnirom.omnilib.utils.OmniSettings
 import java.io.PrintWriter
 import java.util.Locale
 import java.util.TimeZone

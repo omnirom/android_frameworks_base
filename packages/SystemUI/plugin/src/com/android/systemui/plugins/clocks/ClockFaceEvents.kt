@@ -15,7 +15,10 @@ package com.android.systemui.plugins.clocks
 
 import android.content.Context
 import android.graphics.Rect
+import android.provider.Settings.System
 import com.android.systemui.plugins.annotations.ProtectedInterface
+
+import org.omnirom.omnilib.utils.OmniSettings
 
 /** Events that have specific data about the related face */
 @ProtectedInterface
@@ -64,10 +67,20 @@ data class ThemeConfig(
     val seedColor: Int?,
 ) {
     fun getDefaultColor(context: Context): Int {
+        val coloredClock = System.getInt(context.getContentResolver(),
+            OmniSettings.OMNI_LOCKSCREEN_CLOCK_COLORED, 1) != 0
         return when {
             seedColor != null -> seedColor!!
-            isDarkTheme -> context.resources.getColor(android.R.color.system_accent1_100)
-            else -> context.resources.getColor(android.R.color.system_accent2_600)
+            isDarkTheme ->
+                if (coloredClock)
+                                    context.resources.getColor(android.R.color.system_accent1_100)
+                else
+                                    context.resources.getColor(com.android.internal.R.color.primary_text_material_dark)
+                else ->
+                                if (coloredClock)
+                                    context.resources.getColor(android.R.color.system_accent2_600)
+                                else
+                                    context.resources.getColor(com.android.internal.R.color.primary_text_material_light)
         }
     }
 }
