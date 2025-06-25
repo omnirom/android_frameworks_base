@@ -25,7 +25,6 @@ import com.android.internal.logging.UiEventLogger
 import com.android.systemui.dagger.qualifiers.Application
 import com.android.systemui.log.DebugLogger.debugLog
 import com.android.systemui.res.R
-import com.android.systemui.screenshot.ActionIntentCreator.createDelete
 import com.android.systemui.screenshot.ScreenshotEvent.SCREENSHOT_DELETE_TAPPED
 import com.android.systemui.screenshot.ScreenshotEvent.SCREENSHOT_EDIT_TAPPED
 import com.android.systemui.screenshot.ScreenshotEvent.SCREENSHOT_PREVIEW_TAPPED
@@ -156,7 +155,7 @@ constructor(
             uiEventLogger.log(SCREENSHOT_DELETE_TAPPED, 0, request.packageNameString)
             onDeferrableActionTapped { result ->
                 actionExecutor.sendPendingIntent(
-                    createDelete(result.uri, context)
+                    actionIntentCreator.createDelete(result.uri, context)
                 )
             }
         }
