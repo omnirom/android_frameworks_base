@@ -34,6 +34,7 @@ import com.android.systemui.res.R
 import com.android.systemui.settings.DisplayTracker
 import com.android.systemui.statusbar.lockscreen.LockscreenSmartspaceController
 import com.android.systemui.statusbar.policy.ConfigurationController
+import com.android.systemui.tuner.TunerService
 import javax.inject.Inject
 
 class KeyguardSliceViewSection
@@ -45,6 +46,7 @@ constructor(
     @Background val bgHandler: Handler,
     val activityStarter: ActivityStarter,
     val configurationController: ConfigurationController,
+    val tunerService: TunerService,
     val dumpManager: DumpManager,
     val displayTracker: DisplayTracker,
 ) : KeyguardSection() {
@@ -68,6 +70,7 @@ constructor(
                 sliceView,
                 activityStarter,
                 configurationController,
+                tunerService,
                 dumpManager,
                 displayTracker,
             )
