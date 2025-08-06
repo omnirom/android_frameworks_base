@@ -19,9 +19,11 @@ package com.android.keyguard;
 import static android.app.slice.Slice.HINT_LIST_ITEM;
 
 import android.app.PendingIntent;
+import android.database.ContentObserver;
 import android.net.Uri;
 import android.os.Handler;
 import android.os.Trace;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.Display;
 import android.view.View;
@@ -72,6 +74,11 @@ public class KeyguardSliceViewController extends ViewController<KeyguardSliceVie
     private Slice mSlice;
     private Map<View, PendingIntent> mClickActions;
 
+    /*omni add-on*/
+    private Uri KEYGUARD_SLICE_URI_URI =
+            Settings.Secure.getUriFor(Settings.Secure.KEYGUARD_SLICE_URI);
+    private ContentObserver mContentObserver;
+
     ConfigurationController.ConfigurationListener mConfigurationListener =
             new ConfigurationController.ConfigurationListener() {
         @Override
@@ -118,6 +125,12 @@ public class KeyguardSliceViewController extends ViewController<KeyguardSliceVie
         mConfigurationController = configurationController;
         mDumpManager = dumpManager;
         mDisplayTracker = displayTracker;
+        mContentObserver = new ContentObserver(mHandler) {
+            @Override
+            public void onChange(boolean selfChange, Uri uri) {
+                setupUri(uri.toString());
+            }
+        };
     }
 
     @Override
@@ -126,6 +139,11 @@ public class KeyguardSliceViewController extends ViewController<KeyguardSliceVie
         if (display != null) {
             mDisplayId = display.getDisplayId();
         }
+        //mTunerService.addTunable(mTunable, Settings.Secure.KEYGUARD_SLICE_URI);
+        mView.getContext().getContentResolver().registerContentObserver(KEYGUARD_SLICE_URI_URI,
+            false, mContentObserver
+        );
+        mContentObserver.onChange(true, Uri.parse(KeyguardSliceProvider.KEYGUARD_SLICE_URI));
         // Make sure we always have the most current slice
         if (mDisplayId == mDisplayTracker.getDefaultDisplayId() && mLiveData != null) {
             mLiveData.observeForever(mObserver);
@@ -143,6 +161,8 @@ public class KeyguardSliceViewController extends ViewController<KeyguardSliceVie
         if (mDisplayId == mDisplayTracker.getDefaultDisplayId() && mLiveData != null) {
             mLiveData.removeObserver(mObserver);
         }
+        //mTunerService.removeTunable(mTunable);
+        mView.getContext().getContentResolver().unregisterContentObserver(mContentObserver);
         mConfigurationController.removeCallback(mConfigurationListener);
         mDumpManager.unregisterDumpable(
                 TAG + "@" + Integer.toHexString(
