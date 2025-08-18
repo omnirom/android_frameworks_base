@@ -1145,7 +1145,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
         if (!mPowerKeyHandled) {
             if (!interactive) {
-                if (!mLongPressPowerTorch) {
+                if (!mLongPressPowerTorch && !mProxyIsNear) {
                     wakeUpFromWakeKey(event);
                 }
             }
@@ -1666,7 +1666,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
         if (FactoryTest.isLongPressOnPowerOffEnabled()) {
             return LONG_PRESS_POWER_SHUT_OFF_NO_CONFIRM;
         }
-        if (mLongPressPowerTorch && (!isScreenOn() || isDozeMode())) {
+        if (mLongPressPowerTorch && !mProxyIsNear
+                    && (!isScreenOn() || isDozeMode())) {
             return LONG_PRESS_POWER_TORCH;
         }
 
