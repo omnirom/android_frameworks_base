@@ -1667,7 +1667,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
             return LONG_PRESS_POWER_SHUT_OFF_NO_CONFIRM;
         }
         if (mLongPressPowerTorch && !mProxyIsNear
-                    && (!isScreenOn() || isDozeMode())) {
+                    && (!mDefaultDisplayPolicy.isScreenOnFully() || isDozeMode())) {
             return LONG_PRESS_POWER_TORCH;
         }
 
