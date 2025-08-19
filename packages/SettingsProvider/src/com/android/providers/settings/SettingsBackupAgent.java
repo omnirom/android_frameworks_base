@@ -1184,6 +1184,7 @@ public class SettingsBackupAgent extends BackupAgentHelper {
             // OMNI_CHARGING_CONTROL_LIMIT_VALIDATOR == 3 +++InclusiveIntegerRangeValidator
             // OMNI_CHARGING_CONTROL_MODE_VALIDATOR == 4
             // OMNI_CHARGING_CONTROL_TIME_VALIDATOR == 5 ---InclusiveIntegerRangeValidator
+            // OMNI_FAST_CHARGE_MODE_VALIDATOR == 6 FastChargeMode (NONE|FAST_CHARGE|SUPER_FAST_CHARGE)
             for (String key : omniValidators.keySet()) {
                 Integer validatorId = omniValidators.get(key);
                 if (validatorId == 0) {
@@ -1198,6 +1199,8 @@ public class SettingsBackupAgent extends BackupAgentHelper {
                     validators.put(key, SettingsValidators.OMNI_CHARGING_CONTROL_MODE_VALIDATOR);
                 } else if (validatorId == 5) {
                     validators.put(key, SettingsValidators.OMNI_CHARGING_CONTROL_TIME_VALIDATOR);
+                } else if (validatorId == 6) {
+                    validators.put(key, SettingsValidators.OMNI_FAST_CHARGE_MODE_VALIDATOR);
                 }
             }
         } else if (contentUri.equals(Settings.Global.CONTENT_URI)) {
