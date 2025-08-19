@@ -27,6 +27,8 @@ import org.json.JSONObject;
 
 import java.util.Locale;
 
+import vendor.lineage.health.FastChargeMode;
+
 /**
  * This class provides both interface for validation and common validators
  * used to ensure Settings have meaningful values.
@@ -43,6 +45,13 @@ public class SettingsValidators {
 
     public static final Validator OMNI_CHARGING_CONTROL_TIME_VALIDATOR =
             new InclusiveIntegerRangeValidator(0, 86400);
+
+    public static final Validator OMNI_FAST_CHARGE_MODE_VALIDATOR =
+            new DiscreteValueValidator(new String[] {
+                    String.valueOf(FastChargeMode.NONE),
+                    String.valueOf(FastChargeMode.FAST_CHARGE),
+                    String.valueOf(FastChargeMode.SUPER_FAST_CHARGE),
+            });
 
     public static final Validator BOOLEAN_VALIDATOR =
             new DiscreteValueValidator(new String[] {"0", "1"});
