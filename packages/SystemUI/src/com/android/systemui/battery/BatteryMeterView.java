@@ -108,8 +108,6 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     private BatteryDrawableState mUnifiedBatteryState =
             BatteryDrawableState.Companion.getDefaultInitialState();
 
-    private boolean mHideImage;
-
     public BatteryMeterView(Context context, AttributeSet attrs) {
         this(context, attrs, 0);
     }
@@ -321,7 +319,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
             return;
         }
         mPowerSaveEnabled = isPowerSave;
-        if (!newStatusBarIcons() || isImageHidden()) {
+        if (!newStatusBarIcons()) {
             mDrawable.setPowerSaveEnabled(isPowerSave);
         } else {
             setBatteryDrawableState(
@@ -419,7 +417,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     }
 
     void updatePercentText() {
-        if (!newStatusBarIcons() || mHideImage) {
+        if (!newStatusBarIcons()) {
             updatePercentTextLegacy();
             return;
         }
@@ -531,7 +529,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     }
 
     void updateShowPercent() {
-        if (!newStatusBarIcons() || mHideImage) {
+        if (!newStatusBarIcons()) {
             updateShowPercentLegacy();
             return;
         }
@@ -560,11 +558,10 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
 
         // The legacy impl used the percent view for the estimate and the percent text. The modern
         // version only uses it for estimate. It can be safely removed here
-        // Omni: Don't remove mBatteryPercentView for percent on lockscreen with hideImage
-        /*if (mShowPercentMode != MODE_ESTIMATE) {
+        if (mShowPercentMode != MODE_ESTIMATE) {
             removeView(mBatteryPercentView);
             mBatteryPercentView = null;
-        }*/
+        }
     }
 
     private void updateShowPercentLegacy() {
@@ -595,20 +592,13 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     }
 
     void updateShowImage() {
-        mHideImage = Settings.System.getIntForUser(getContext().getContentResolver(),
-            OMNI_SHOW_BATTERY_IMAGE, 1, UserHandle.USER_CURRENT) == 0;
-        mBatteryIconView.setVisibility(mHideImage ? View.GONE : View.VISIBLE);
-        if (mHideImage) {
-            updateShowPercentLegacy();
-            updatePercentTextLegacy();
-        } else {
-            removeView(mBatteryPercentView);
-            mBatteryPercentView = null;
-        }
-    }
-
-    boolean isImageHidden() {
-        return mHideImage && mBatteryPercentView != null;
+        final boolean hideImage = Settings.System.getIntForUser(getContext().getContentResolver(),
+                OMNI_SHOW_BATTERY_IMAGE, 1, UserHandle.USER_CURRENT) == 0;
+        mBatteryIconView.setVisibility(hideImage ? View.GONE : View.VISIBLE);
+        //int padding = getResources().getDimensionPixelSize(R.dimen.signal_cluster_battery_padding);
+        //LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) getLayoutParams();
+        //lp.setMargins(hideImage ? -padding : 0, 0, 0, 0);
+        //setLayoutParams(lp);
     }
 
     private Drawable getUnknownStateDrawable() {
@@ -733,7 +723,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
     public void onDarkChanged(ArrayList<Rect> areas, float darkIntensity, int tint) {
         if (mIsStaticColor) return;
 
-        if (!newStatusBarIcons() || isImageHidden()) {
+        if (!newStatusBarIcons()) {
             onDarkChangedLegacy(areas, darkIntensity, tint);
             return;
         }
@@ -793,7 +783,7 @@ public class BatteryMeterView extends LinearLayout implements DarkReceiver {
 
     /** For newStatusBarIcons(), we use a BatteryColors object to declare the theme */
     public void setUnifiedBatteryColors(BatteryColors colors) {
-        if (!newStatusBarIcons() || isImageHidden()) return;
+        if (!newStatusBarIcons()) return;
 
         mUnifiedBatteryColors = colors;
         mUnifiedBattery.setColors(mUnifiedBatteryColors);

@@ -173,7 +173,6 @@ public class BatteryMeterViewController extends ViewController<BatteryMeterView>
 
         mView.updateShowPercent();
         mView.updateShowImage();
-        mView.isImageHidden();
     }
 
     @Override
@@ -243,7 +242,6 @@ public class BatteryMeterViewController extends ViewController<BatteryMeterView>
             super.onChange(selfChange, uri);
             mView.updateShowPercent();
             mView.updateShowImage();
-            mView.isImageHidden();
             if (TextUtils.equals(uri.getLastPathSegment(),
                     Settings.Global.BATTERY_ESTIMATES_LAST_UPDATE_TIME)) {
                 // update the text for sure if the estimate in the cache was updated
