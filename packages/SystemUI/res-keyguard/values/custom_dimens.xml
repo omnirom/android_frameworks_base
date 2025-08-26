@@ -19,4 +19,5 @@
 -->
 <resources>
     <dimen name="header_font_size">18dp</dimen>
+    <dimen name="custom_widget_icon_padding">1dp</dimen>
 </resources>
