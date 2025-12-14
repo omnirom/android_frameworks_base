@@ -200,6 +200,14 @@ constructor(
     private val forceHideCheveron = true
     private var labelHide = false
 
+    private val tapTimeoutMillis =
+        if (android.companion.virtualdevice.flags.Flags.viewconfigurationApis()) {
+                ViewConfiguration.get(context).tapTimeoutMillis
+            } else {
+                ViewConfiguration.getTapTimeout()
+            }
+            .toLong()
+
     /** Visuo-haptic long-press effects */
     private var longPressEffectAnimator: ValueAnimator? = null
     var haveLongPressPropertiesBeenReset = true
@@ -669,10 +677,7 @@ constructor(
                 MotionEvent.ACTION_DOWN -> {
                     longPressEffect.handleActionDown()
                     if (isLongClickable) {
-                        postDelayed(
-                            { longPressEffect.handleTimeoutComplete() },
-                            ViewConfiguration.getTapTimeout().toLong(),
-                        )
+                        postDelayed({ longPressEffect.handleTimeoutComplete() }, tapTimeoutMillis)
                     }
                 }
                 MotionEvent.ACTION_UP -> longPressEffect.handleActionUp()

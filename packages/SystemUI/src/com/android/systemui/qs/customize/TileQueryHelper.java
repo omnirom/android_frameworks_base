@@ -114,7 +114,6 @@ public class TileQueryHelper {
         possibleTiles.addAll(Arrays.asList(possible.split(",")));
 
         final ArrayList<QSTile> tilesToAdd = new ArrayList<>();
-        possibleTiles.remove("cell");
         possibleTiles.remove("wifi");
         if (Flags.evenDimmer() && mContext.getResources().getBoolean(
                 com.android.internal.R.bool.config_evenDimmerEnabled)) {

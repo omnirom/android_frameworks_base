@@ -1090,13 +1090,13 @@ public class RingtoneManager {
         }
     }
 
-    /** {@hide} */
+    /** @hide */
     public static Uri getCacheForType(int type) {
         return getCacheForTypeBySlot(type, UserHandle.getCallingUserId(),
                 SubscriptionManager.getDefaultVoicePhoneId());
     }
 
-    /** {@hide} */
+    /** @hide */
     public static Uri getCacheForType(int type, int userId) {
         return getCacheForTypeBySlot(type, userId, SubscriptionManager.getDefaultVoicePhoneId());
     }
@@ -1144,7 +1144,7 @@ public class RingtoneManager {
         }
 
         if (Flags.enableRingtoneHapticsCustomization()
-                && Utils.hasVibration(defaultRingtoneUri)) {
+                && Utils.hasVibrationParameter(defaultRingtoneUri)) {
             // skip to check TYPE_ALARM because the customized haptic hasn't enabled in alarm
             if (defaultRingtoneUri.toString()
                     .contains(Settings.System.DEFAULT_RINGTONE_URI.toString())) {

@@ -42,9 +42,9 @@ import com.android.systemui.dagger.SysUISingleton;
 import com.android.systemui.demomode.DemoMode;
 import com.android.systemui.demomode.DemoModeController;
 import com.android.systemui.dump.DumpManager;
-import com.android.systemui.modes.shared.ModesUiIcons;
 import com.android.systemui.statusbar.CommandQueue;
 import com.android.systemui.statusbar.StatusIconDisplayable;
+import com.android.systemui.statusbar.core.StatusBarConnectedDisplays;
 import com.android.systemui.statusbar.phone.StatusBarIconHolder;
 import com.android.systemui.statusbar.phone.StatusBarIconHolder.BindableIconHolder;
 import com.android.systemui.statusbar.pipeline.StatusBarPipelineFlags;
@@ -83,7 +83,7 @@ public class StatusBarIconControllerImpl implements Tunable,
     private final StatusBarPipelineFlags mStatusBarPipelineFlags;
     private final Context mContext;
 
-    /** */
+    /**  */
     @Inject
     public StatusBarIconControllerImpl(
             Context context,
@@ -100,7 +100,11 @@ public class StatusBarIconControllerImpl implements Tunable,
         mContext = context;
         mStatusBarPipelineFlags = statusBarPipelineFlags;
 
-        configurationController.addCallback(this);
+        if (StatusBarConnectedDisplays.isEnabled()) {
+            // refresh requests are dispatched by StatusBarIconRefreshInteractor, per display.
+        } else {
+            configurationController.addCallback(this);
+        }
         commandQueue.addCallback(mCommandQueueCallbacks);
         tunerService.addTunable(this, ICON_HIDE_LIST);
         demoModeController.addCallback(this);
@@ -129,7 +133,7 @@ public class StatusBarIconControllerImpl implements Tunable,
         }
     }
 
-    /** */
+    /**  */
     @Override
     public void addIconGroup(IconManager group) {
         for (IconManager existingIconManager : mIconGroups) {
@@ -161,7 +165,21 @@ public class StatusBarIconControllerImpl implements Tunable,
         addIconGroup(iconManager);
     }
 
+    @Override
+    public void refreshIconGroups(int displayId) {
+        if (!StatusBarConnectedDisplays.isEnabled()) return;
+        for (int i = mIconGroups.size() - 1; i >= 0; --i) {
+            IconManager group = mIconGroups.get(i);
+            if (group.getDisplayId() == displayId) {
+                removeIconGroup(group);
+                addIconGroup(group);
+            }
+        }
+    }
+
+    @Deprecated // Use refreshIconGroups(int displayId) instead
     private void refreshIconGroups() {
+        StatusBarConnectedDisplays.assertInLegacyMode();
         for (int i = mIconGroups.size() - 1; i >= 0; --i) {
             IconManager group = mIconGroups.get(i);
             removeIconGroup(group);
@@ -169,14 +187,14 @@ public class StatusBarIconControllerImpl implements Tunable,
         }
     }
 
-    /** */
+    /**  */
     @Override
     public void removeIconGroup(IconManager group) {
         group.destroy();
         mIconGroups.remove(group);
     }
 
-    /** */
+    /**  */
     @Override
     public void onTuningChanged(String key, String newValue) {
         if (!ICON_HIDE_LIST.equals(key)) {
@@ -242,17 +260,9 @@ public class StatusBarIconControllerImpl implements Tunable,
     public void setResourceIcon(String slot, @Nullable String resPackage,
             @DrawableRes int iconResId, @Nullable Drawable preloadedIcon,
             CharSequence contentDescription, StatusBarIcon.Shape shape) {
-        if (ModesUiIcons.isUnexpectedlyInLegacyMode()) {
-            // Fall back to old implementation, although it will not load the icon if it's from a
-            // different package.
-            setIcon(slot, iconResId, contentDescription);
-            return;
-        }
-
         Icon icon = resPackage != null
                 ? Icon.createWithResource(resPackage, iconResId)
                 : Icon.createWithResource(mContext, iconResId);
-
         setResourceIconInternal(
                 slot,
                 icon,
@@ -317,6 +327,7 @@ public class StatusBarIconControllerImpl implements Tunable,
     /**
      * Accept a list of MobileIconStates, which all live in the same slot(?!), and then are sorted
      * by subId. Don't worry this definitely makes sense and works.
+     *
      * @param subIds list of subscription ID integers that provide the key to the icon to display.
      */
     @Override
@@ -386,12 +397,12 @@ public class StatusBarIconControllerImpl implements Tunable,
         }
     }
 
-    /** */
+    /**  */
     public void setIconVisibility(String slot, boolean visibility) {
         setIconVisibility(slot, visibility, 0);
     }
 
-    /** */
+    /**  */
     public void setIconVisibility(String slot, boolean visibility, int tag) {
         StatusBarIconHolder holder = mStatusBarIconList.getIconHolder(slot, tag);
         if (holder == null || holder.isVisible() == visibility) {
@@ -402,23 +413,7 @@ public class StatusBarIconControllerImpl implements Tunable,
         handleSet(slot, holder);
     }
 
-    /** */
-    @Override
-    public void setIconAccessibilityLiveRegion(String slotName, int accessibilityLiveRegion) {
-        Slot slot = mStatusBarIconList.getSlot(slotName);
-        if (!slot.hasIconsInSlot()) {
-            return;
-        }
-
-        List<StatusBarIconHolder> iconsToUpdate = slot.getHolderListInViewOrder();
-        for (StatusBarIconHolder holder : iconsToUpdate) {
-            int viewIndex = mStatusBarIconList.getViewIndex(slotName, holder.getTag());
-            mIconGroups.forEach(l -> l.mGroup.getChildAt(viewIndex)
-                    .setAccessibilityLiveRegion(accessibilityLiveRegion));
-        }
-    }
-
-    /** */
+    /**  */
     @Override
     public void removeIcon(String slot, int tag) {
         // If the new pipeline is on for this icon, don't allow removal, since the new pipeline
@@ -468,7 +463,7 @@ public class StatusBarIconControllerImpl implements Tunable,
         mIconGroups.forEach(l -> l.onSetIconHolder(viewIndex, holder));
     }
 
-    /** */
+    /**  */
     @Override
     public void dump(PrintWriter pw, String[] args) {
         pw.println(TAG + " state:");
@@ -487,7 +482,7 @@ public class StatusBarIconControllerImpl implements Tunable,
         mStatusBarIconList.dump(pw);
     }
 
-    /** */
+    /**  */
     @Override
     public void onDemoModeStarted() {
         for (IconManager manager : mIconGroups) {
@@ -497,7 +492,7 @@ public class StatusBarIconControllerImpl implements Tunable,
         }
     }
 
-    /** */
+    /**  */
     @Override
     public void onDemoModeFinished() {
         for (IconManager manager : mIconGroups) {
@@ -507,7 +502,7 @@ public class StatusBarIconControllerImpl implements Tunable,
         }
     }
 
-    /** */
+    /**  */
     @Override
     public void dispatchDemoCommand(String command, Bundle args) {
         for (IconManager manager : mIconGroups) {
@@ -517,7 +512,7 @@ public class StatusBarIconControllerImpl implements Tunable,
         }
     }
 
-    /** */
+    /**  */
     @Override
     public List<String> demoCommands() {
         List<String> s = new ArrayList<>();
@@ -525,9 +520,10 @@ public class StatusBarIconControllerImpl implements Tunable,
         return s;
     }
 
-    /** */
+    /**  */
     @Override
     public void onDensityOrFontScaleChanged() {
+        StatusBarConnectedDisplays.assertInLegacyMode();
         refreshIconGroups();
     }
 
