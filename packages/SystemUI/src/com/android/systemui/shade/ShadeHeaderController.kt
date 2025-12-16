@@ -395,6 +395,8 @@ constructor(
             mView.requireViewById<ViewGroup>(R.id.hover_system_icons_container).apply {
                 addView(batteryComposeView, -1)
             }
+
+            batteryComposeView.setOnClickListener { launchBatteryActivity() }
         }
 
         carrierIconSlots =
@@ -520,6 +522,12 @@ constructor(
             .setInterpolator(if (show) Interpolators.ALPHA_OUT else Interpolators.ALPHA_IN)
             .setListener(CustomizerAnimationListener(show))
             .start()
+    }
+
+    private fun launchBatteryActivity() {
+        activityStarter.postStartActivityDismissingKeyguard(
+            Intent(Intent.ACTION_POWER_USAGE_SUMMARY), 0
+        )
     }
 
     @VisibleForTesting
