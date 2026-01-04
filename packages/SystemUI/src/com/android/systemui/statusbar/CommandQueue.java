@@ -1794,7 +1794,8 @@ public class CommandQueue extends IStatusBar.Stub implements
                     break;
                 case MSG_SHOW_SHUTDOWN_UI:
                     for (Callbacks callback : mCallbacks) {
-                        callback.handleShowShutdownUi(msg.arg1 != 0, (String) msg.obj);
+                        callback.handleShowShutdownUi(msg.arg1 != 0, (String) msg.obj,
+                                msg.arg2 != 0);
                     }
                     break;
                 case MSG_SET_TOP_APP_HIDES_STATUS_BAR:
