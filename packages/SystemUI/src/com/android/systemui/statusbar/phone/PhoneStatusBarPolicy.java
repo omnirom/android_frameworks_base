@@ -39,7 +39,6 @@ import android.graphics.Paint;
 import android.graphics.PaintFlagsDrawFilter;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.Icon;
 import android.media.AudioManager;
 import android.os.Handler;
 import android.os.Looper;
@@ -526,7 +525,7 @@ public class PhoneStatusBarPolicy
                                 Drawable d = BluetoothDeviceLayerDrawable.createLayerDrawable(mContext,
                                         R.drawable.ic_bluetooth_connected, batteryLevel, 1, -padding, padding, 0);
                                 icon = new StatusBarIcon(UserHandle.SYSTEM, mContext.getPackageName(),
-                                        Icon.createWithBitmap(getBitmapFromDrawable(d)), 0, 0, contentDescription,
+                                        android.graphics.drawable.Icon.createWithBitmap(getBitmapFromDrawable(d)), 0, 0, contentDescription,
                                             StatusBarIcon.Type.SystemIcon);
                             } else {
                                 iconId = R.drawable.stat_sys_data_bluetooth_connected;
