@@ -4373,7 +4373,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
             final int userId = livingUsers.get(i).id;
             final boolean isPermissionUpgradeNeeded = !Objects.equals(
                     mPermissionManager.getDefaultPermissionGrantFingerprint(userId),
-                    Build.FINGERPRINT);
+                    String.valueOf(Build.TIME));
             if (isPermissionUpgradeNeeded) {
                 grantPermissionsUserIds = ArrayUtils.appendInt(
                         grantPermissionsUserIds, userId);
@@ -4382,7 +4382,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
         // If we upgraded grant all default permissions before kicking off.
         for (int userId : grantPermissionsUserIds) {
             mLegacyPermissionManager.grantDefaultPermissions(userId);
-            mPermissionManager.setDefaultPermissionGrantFingerprint(Build.FINGERPRINT, userId);
+            mPermissionManager.setDefaultPermissionGrantFingerprint(String.valueOf(Build.TIME), userId);
         }
         if (grantPermissionsUserIds == EMPTY_INT_ARRAY) {
             // If we did not grant default permissions, we preload from this the
@@ -4550,7 +4550,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
         if (!convertedFromPreCreated || !readPermissionStateForUser(userId)) {
             mPermissionManager.onUserCreated(userId);
             mLegacyPermissionManager.grantDefaultPermissions(userId);
-            mPermissionManager.setDefaultPermissionGrantFingerprint(Build.FINGERPRINT, userId);
+            mPermissionManager.setDefaultPermissionGrantFingerprint(String.valueOf(Build.TIME), userId);
             mDomainVerificationManager.clearUser(userId);
             mInstallerService.onUserAdded(userId);
         }
@@ -4563,7 +4563,7 @@ public class PackageManagerService implements PackageSender, TestUtilityService 
             mPermissionManager.readLegacyPermissionStateTEMP();
             final boolean isPermissionUpgradeNeeded = !Objects.equals(
                     mPermissionManager.getDefaultPermissionGrantFingerprint(userId),
-                    Build.FINGERPRINT);
+                    String.valueOf(Build.TIME));
             return isPermissionUpgradeNeeded;
         }
     }
