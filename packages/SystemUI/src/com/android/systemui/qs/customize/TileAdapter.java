@@ -60,8 +60,6 @@ import com.android.systemui.qs.external.CustomTile;
 import com.android.systemui.qs.tileimpl.QSTileViewImpl;
 import com.android.systemui.res.R;
 
-import org.omnirom.omnilib.utils.OmniUtils;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -144,7 +142,6 @@ public class TileAdapter extends RecyclerView.Adapter<Holder> implements TileSta
                 ? context.getResources().getInteger(
                         R.integer.small_land_lockscreen_quick_settings_num_columns)
                 : context.getResources().getInteger(NUM_COLUMNS_ID);
-        mNumColumns = OmniUtils.getQSColumnsCount(mContext, mNumColumns);
         mAccessibilityDelegate = new TileAdapterDelegate();
         mSizeLookup.setSpanIndexCacheEnabled(true);
         mTempTextView = new TextView(context);
@@ -171,7 +168,6 @@ public class TileAdapter extends RecyclerView.Adapter<Holder> implements TileSta
                 ? mContext.getResources().getInteger(
                         R.integer.small_land_lockscreen_quick_settings_num_columns)
                 : mContext.getResources().getInteger(NUM_COLUMNS_ID);
-        numColumns = OmniUtils.getQSColumnsCount(mContext, numColumns);
         if (numColumns != mNumColumns) {
             mNumColumns = numColumns;
             return true;

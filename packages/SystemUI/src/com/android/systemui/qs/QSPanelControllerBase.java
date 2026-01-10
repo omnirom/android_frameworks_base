@@ -30,12 +30,10 @@ import android.view.View;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.logging.MetricsLogger;
 import com.android.internal.logging.UiEventLogger;
-import com.android.systemui.Dependency;
 import com.android.systemui.Dumpable;
 import com.android.systemui.dump.DumpManager;
 import com.android.systemui.haptics.qs.QSLongPressEffect;
 import com.android.systemui.media.controls.ui.view.MediaHost;
-import com.android.systemui.omni.OmniSettingsService;
 import com.android.systemui.plugins.qs.QSTile;
 import com.android.systemui.plugins.qs.QSTileView;
 import com.android.systemui.qs.customize.QSCustomizerController;
@@ -58,8 +56,6 @@ import kotlin.jvm.functions.Function1;
 import kotlinx.coroutines.DisposableHandle;
 import kotlinx.coroutines.flow.StateFlow;
 
-import org.omnirom.omnilib.utils.OmniSettings;
-
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -77,7 +73,7 @@ import javax.inject.Provider;
  * @param <T> Type of QSPanel.
  */
 public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewController<T>
-        implements Dumpable, OmniSettingsService.OmniSettingsObserver {
+        implements Dumpable{
     private static final String TAG = "QSPanelControllerBase";
     protected final QSHost mHost;
     private final QSCustomizerController mQsCustomizerController;
@@ -273,15 +269,6 @@ public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewContr
         switchTileLayout(true);
 
         mDumpManager.registerDumpable(mView.getDumpableTag(), this);
-        Dependency.get(OmniSettingsService.class).addIntObserver(this,
-                OmniSettings.OMNI_QS_TILE_VERTICAL_LAYOUT);
-        Dependency.get(OmniSettingsService.class).addIntObserver(this,
-                OmniSettings.OMNI_QS_LAYOUT_COLUMNS);
-        Dependency.get(OmniSettingsService.class).addIntObserver(this,
-                OmniSettings.OMNI_QS_LAYOUT_COLUMNS_LANDSCAPE);
-        Dependency.get(OmniSettingsService.class).addIntObserver(this,
-                OmniSettings.OMNI_QS_TILE_LABEL_HIDE);
-
         setListening(mLastListening);
     }
 
@@ -311,7 +298,6 @@ public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewContr
         mMediaHost.removeVisibilityChangeListener(mMediaHostVisibilityListener);
 
         mDumpManager.unregisterDumpable(mView.getDumpableTag());
-        Dependency.get(OmniSettingsService.class).removeObserver(this);
     }
 
     @Nullable
@@ -625,14 +611,6 @@ public abstract class QSPanelControllerBase<T extends QSPanel> extends ViewContr
     @Nullable
     public View getBrightnessView() {
         return mView.getBrightnessView();
-    }
-
-    @Override
-    public void onIntSettingChanged(String key, Integer newValue) {
-        if (mView.getTileLayout() != null) {
-            mView.getTileLayout().updateSettings();
-            setTiles();
-        }
     }
 
     /**

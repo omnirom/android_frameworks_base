@@ -682,7 +682,7 @@ public class QSPanel extends LinearLayout implements Tunable {
 
     void setColumnRowLayout(boolean withMedia) {
         mTileLayout.setMinRows(withMedia ? 2 : 1);
-        mTileLayout.setMaxColumns(withMedia ? mTileLayout.getResourceColumns() / 2 : mTileLayout.getResourceColumns());
+        mTileLayout.setMaxColumns(withMedia ? 2 : 4);
         placeTileLayoutForScene(withMedia);
     }
 
@@ -843,10 +843,6 @@ public class QSPanel extends LinearLayout implements Tunable {
         int getNumVisibleTiles();
 
         default void setLogger(QSLogger qsLogger) { }
-
-        int getResourceColumns();
-
-        void updateSettings();
     }
 
     interface OnConfigurationChangedListener {
