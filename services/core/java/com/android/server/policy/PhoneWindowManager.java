@@ -333,8 +333,8 @@ public class PhoneWindowManager implements WindowManagerPolicy {
     static final int LONG_PRESS_POWER_SHUT_OFF_NO_CONFIRM = 3;
     static final int LONG_PRESS_POWER_GO_TO_VOICE_ASSIST = 4;
     static final int LONG_PRESS_POWER_ASSISTANT = 5; // Settings.Secure.ASSISTANT
-    static final int LONG_PRESS_POWER_TORCH = 6;
-    static final int LONG_PRESS_POWER_GO_TO_SLEEP = 7;
+    static final int LONG_PRESS_POWER_GO_TO_SLEEP = 6;
+    static final int LONG_PRESS_POWER_TORCH = 7;
 
     // must match: config_veryLongPresOnPowerBehavior in config.xml
     // The config value can be overridden using Settings.Global.POWER_BUTTON_VERY_LONG_PRESS
@@ -1542,6 +1542,12 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 launchAssistAction(null, powerKeyDeviceId, eventTime,
                         AssistUtils.INVOCATION_TYPE_POWER_BUTTON_LONG_PRESS);
                 break;
+            case LONG_PRESS_POWER_GO_TO_SLEEP:
+                mPowerKeyHandled = true;
+                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS_POWER_BUTTON,
+                        "Power - Long Press - Go To Sleep (Doze)");
+                sleepDefaultDisplayFromPowerButton(eventTime, 0);
+                break;
             case LONG_PRESS_POWER_TORCH:
                 mPowerKeyHandled = true;
                 performHapticFeedback(HapticFeedbackConstants.LONG_PRESS,
@@ -1552,12 +1558,6 @@ public class PhoneWindowManager implements WindowManagerPolicy {
                 Message msg = mHandler.obtainMessage(MSG_TOGGLE_TORCH);
                 msg.setAsynchronous(true);
                 msg.sendToTarget();
-                break;
-            case LONG_PRESS_POWER_GO_TO_SLEEP:
-                mPowerKeyHandled = true;
-                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS_POWER_BUTTON,
-                        "Power - Long Press - Go To Sleep (Doze)");
-                sleepDefaultDisplayFromPowerButton(eventTime, 0);
                 break;
         }
     }
