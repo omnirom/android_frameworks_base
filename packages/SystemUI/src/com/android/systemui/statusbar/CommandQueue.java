@@ -2118,13 +2118,13 @@ public class CommandQueue extends IStatusBar.Stub implements
                     break;
                 }
                 case MSG_TOGGLE_CAMERA_FLASH:
-                    for (int i = 0; i < mCallbacks.size(); i++) {
-                        mCallbacks.get(i).toggleCameraFlash();
+                    for (Callbacks callback : mCallbacks) {
+                        callback.toggleCameraFlash();
                     }
                     break;
                 case MSG_TOGGLE_CAMERA_FLASH_STATE:
-                    for (int i = 0; i < mCallbacks.size(); i++) {
-                        mCallbacks.get(i).toggleCameraFlashState(msg.arg1 != 0);
+                    for (Callbacks callback : mCallbacks) {
+                        callback.toggleCameraFlashState(msg.arg1 != 0);
                     }
                     break;
             }
