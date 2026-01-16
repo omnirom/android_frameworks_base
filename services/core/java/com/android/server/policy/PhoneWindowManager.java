@@ -2669,7 +2669,7 @@ public class PhoneWindowManager implements WindowManagerPolicy {
 
         private void onLongPress(@NonNull SingleKeyGestureEvent event) {
             if (mSingleKeyGestureDetector.beganFromNonInteractive() || isFlashLightIsOn()) {
-                if (mLongPressPowerTorch) {
+                if (mLongPressPowerTorch && event.getAction() == ACTION_COMPLETE) {
                     if (!mProxyIsNear) {
                         performHapticFeedback(HapticFeedbackConstants.LONG_PRESS_POWER_BUTTON,
                         "Power - Long Press - Torch");
