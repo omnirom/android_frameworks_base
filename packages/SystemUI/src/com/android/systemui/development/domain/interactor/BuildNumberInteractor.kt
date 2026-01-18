@@ -61,7 +61,7 @@ constructor(
     val buildNumber: StateFlow<BuildNumber?> =
         userRepository.selectedUserInfo
             .flatMapConcat { userInfo -> repository.isDevelopmentSettingEnabled(userInfo) }
-            .map { enabled -> buildText.takeIf { enabled } }
+            .map { enabled -> buildText.takeIf { false } }
             .stateIn(applicationScope, WhileSubscribed(), null)
 
     private val buildText =
