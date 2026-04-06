@@ -14,43 +14,42 @@
  * limitations under the License.
  */
 
-package com.android.systemui.omni.dagger;
+package com.android.systemui.omni.dagger
 
-import com.android.systemui.qs.tiles.AODTile;
-import com.android.systemui.qs.tiles.CaffeineTile;
-import com.android.systemui.qs.tiles.DataSwitchTile;
-import com.android.systemui.qs.tiles.ScreenshotTile;
+import com.android.systemui.qs.tiles.AODTile
+import com.android.systemui.qs.tiles.CaffeineTile
+import com.android.systemui.qs.tiles.DataSwitchTile
+import com.android.systemui.qs.tiles.ScreenshotTile
 
-import com.android.systemui.qs.tileimpl.QSTileImpl;
+import com.android.systemui.qs.tileimpl.QSTileImpl
 
-import dagger.Binds;
-import dagger.Module;
-import dagger.multibindings.ClassKey;
-import dagger.multibindings.IntoMap;
-import dagger.multibindings.StringKey;
+import dagger.Binds
+import dagger.Module
+import dagger.multibindings.IntoMap
+import dagger.multibindings.StringKey
 
 
 /** Dagger Module for code in the systemui package. */
 @Module
-public interface OmniModule {
+interface OmniModule {
     /** Inject Tiles */
     @Binds
     @IntoMap
     @StringKey(AODTile.TILE_SPEC)
-    public abstract QSTileImpl<?> bindAODTile(AODTile aodTile);
+    fun bindAODTile(aodTile: AODTile): QSTileImpl<*>
 
     @Binds
     @IntoMap
     @StringKey(CaffeineTile.TILE_SPEC)
-    public abstract QSTileImpl<?> bindCaffeineTile(CaffeineTile caffeineTile);
+    fun bindCaffeineTile(caffeineTile: CaffeineTile): QSTileImpl<*>
 
     @Binds
     @IntoMap
     @StringKey(DataSwitchTile.TILE_SPEC)
-    public abstract QSTileImpl<?> bindDataSwitchTile(DataSwitchTile dataSwitchTile);
+    fun bindDataSwitchTile(dataSwitchTile: DataSwitchTile): QSTileImpl<*>
 
     @Binds
     @IntoMap
     @StringKey(ScreenshotTile.TILE_SPEC)
-    public abstract QSTileImpl<?> bindScreenshotTile(ScreenshotTile screenshotTile);
+    fun bindScreenshotTile(screenshotTile: ScreenshotTile): QSTileImpl<*>
 }
