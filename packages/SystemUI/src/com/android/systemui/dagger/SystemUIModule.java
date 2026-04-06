@@ -98,6 +98,8 @@ import com.android.systemui.motiontool.MotionToolModule;
 import com.android.systemui.navigationbar.NavigationBarComponent;
 import com.android.systemui.navigationbar.gestural.dagger.GestureModule;
 import com.android.systemui.notetask.NoteTaskModule;
+import com.android.systemui.omni.OmniSettingsService;
+import com.android.systemui.omni.OmniSettingsServiceImpl;
 import com.android.systemui.omni.dagger.OmniModule;
 import com.android.systemui.people.PeopleModule;
 import com.android.systemui.plugins.BcSmartspaceConfigPlugin;
@@ -518,4 +520,8 @@ public abstract class SystemUIModule {
     static SettingsProxy.CurrentUserIdProvider provideCurrentUserId(UserTracker userTracker) {
         return userTracker::getUserId;
     }
+
+    /** Inject OmniSettingsService*/
+    @Binds
+    abstract OmniSettingsService provideOmniSettingsService(OmniSettingsServiceImpl impl);
 }

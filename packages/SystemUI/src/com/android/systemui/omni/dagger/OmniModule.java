@@ -16,9 +16,6 @@
 
 package com.android.systemui.omni.dagger;
 
-import com.android.systemui.omni.OmniSettingsService;
-import com.android.systemui.omni.OmniSettingsServiceImpl;
-
 import com.android.systemui.qs.tiles.AODTile;
 import com.android.systemui.qs.tiles.CaffeineTile;
 import com.android.systemui.qs.tiles.DataSwitchTile;
@@ -36,10 +33,6 @@ import dagger.multibindings.StringKey;
 /** Dagger Module for code in the systemui package. */
 @Module
 public interface OmniModule {
-    /** */
-    @Binds
-    OmniSettingsService provideOmniSettingsService(OmniSettingsServiceImpl impl);
-    
     /** Inject Tiles */
     @Binds
     @IntoMap
