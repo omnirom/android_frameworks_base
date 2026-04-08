@@ -54,6 +54,9 @@ public class ScreenshotTile extends QSTileImpl<BooleanState> {
     public static final String TILE_SPEC = "screenshot";
     private final PanelInteractor mPanelInteractor;
 
+    @Nullable
+    private Icon mIcon = null;
+
     @Inject
     public ScreenshotTile(
             QSHost host,
@@ -115,7 +118,10 @@ public class ScreenshotTile extends QSTileImpl<BooleanState> {
                 R.string.global_action_screenshot);
         state.contentDescription =  mContext.getString(
                 R.string.global_action_screenshot);
-        state.icon = ResourceIcon.get(R.drawable.ic_screenshot);
+        if (mIcon == null) {
+            mIcon = maybeLoadResourceIcon(R.drawable.ic_screenshot);
+        }
+        state.icon = mIcon;
         state.value = true;
         state.state = Tile.STATE_INACTIVE;
     }

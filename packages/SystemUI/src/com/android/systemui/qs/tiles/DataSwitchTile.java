@@ -60,6 +60,9 @@ public class DataSwitchTile extends QSTileImpl<BooleanState> {
     private final SubscriptionManager mSubscriptionManager;
     private final TelephonyManager mTelephonyManager;
 
+    @Nullable
+    private Icon mIcon = null;
+
     @Inject
     public DataSwitchTile(
         QSHost host,
@@ -176,18 +179,27 @@ public class DataSwitchTile extends QSTileImpl<BooleanState> {
         updateSimCount();
         state.value = mSimCount == 2;
         if (mSimCount == 1 || mSimCount == 2) {
-            state.icon = ResourceIcon.get(activeSIMZero
-                    ? R.drawable.ic_qs_data_switch_1
-                    : R.drawable.ic_qs_data_switch_2);
+            if (mIcon == null) {
+                mIcon = maybeLoadResourceIcon(activeSIMZero
+                        ? R.drawable.ic_qs_data_switch_1
+                        : R.drawable.ic_qs_data_switch_2);
+            }
+            state.icon = mIcon;
             state.secondaryLabel = mContext.getString(activeSIMZero
                     ? R.string.qs_data_sim_1
                     : R.string.qs_data_sim_2);
         } else {
             if (mSimCount == 0) {
-                state.icon = ResourceIcon.get(R.drawable.ic_qs_data_switch_0);
+                if (mIcon == null) {
+                    mIcon = maybeLoadResourceIcon(R.drawable.ic_qs_data_switch_0);
+                }
+                state.icon = mIcon;
                 state.secondaryLabel = mContext.getString(R.string.qs_data_no_sim);
             } else {
-                state.icon = ResourceIcon.get(R.drawable.ic_qs_data_switch_1);
+                if (mIcon == null) {
+                    mIcon = maybeLoadResourceIcon(R.drawable.ic_qs_data_switch_1);
+                }
+                state.icon = mIcon;
                 state.secondaryLabel = mContext.getString(R.string.qs_data_sim_1);
             }
         }
